@@ -4,6 +4,8 @@
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/vector3.hpp"
 #include "privyaznik_msgs/msg/command.hpp"
+#include "privyaznik_msgs/srv/utm_to_wgs.hpp"
+#include "privyaznik_msgs/srv/wgs_to_utm.hpp"
 
 #include <mavsdk/mavsdk.h>
 #include <mavsdk/plugins/param/param.h>
@@ -39,8 +41,10 @@ class MavsdkBridgeNode : public rclcpp::Node
             param_handle.set_param_int("LAND_SPEED", 20);
             // param_handle.set_param_int("LOG_DISARMED", 1);
 
-            sub_prec_landing = this->create_subscription<geometry_msgs::msg::Vector3>("/camera/landing_position", 10, std::bind(&MavsdkBridgeNode::prec_land_callback, this, _1));
-            sub_commands = this->create_subscription<privyaznik_msgs::msg::Command>("/commands", 10, std::bind(&MavsdkBridgeNode::commands_callback, this, _1));
+            sub_prec_landing = this->create_subscription<geometry_msgs::msg::Vector3>("camera/landing_position", 10, std::bind(&MavsdkBridgeNode::prec_land_callback, this, _1));
+            sub_commands = this->create_subscription<privyaznik_msgs::msg::Command>("commands", 10, std::bind(&MavsdkBridgeNode::commands_callback, this, _1));
+            utm_to_wgs_client = this->create_client<privyaznik_msgs::srv::UtmToWgs>("utm_to_wgs");
+            wgs_to_utm_client = this->create_client<privyaznik_msgs::srv::WgsToUtm>("wgs_to_utm");
         }
 
     private:
@@ -48,7 +52,8 @@ class MavsdkBridgeNode : public rclcpp::Node
         std::optional<std::shared_ptr<mavsdk::System>> system;
         rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr sub_prec_landing;
         rclcpp::Subscription<privyaznik_msgs::msg::Command>::SharedPtr sub_commands;
-
+        rclcpp::Client<privyaznik_msgs::srv::UtmToWgs>::SharedPtr utm_to_wgs_client;
+        rclcpp::Client<privyaznik_msgs::srv::WgsToUtm>::SharedPtr wgs_to_utm_client;
 
         void commands_callback(const privyaznik_msgs::msg::Command::SharedPtr command) // Проблема такого колбэка в том, что const не позволяет модифицировать переменные за пределами функции
         {
@@ -150,21 +155,30 @@ class MavsdkBridgeNode : public rclcpp::Node
          * @brief Выполняет попытку сесть, как только получена команда. Если не получилось, пытается еще.
          * @param data std::vector<float> - не несет полезных значений для этой команды
         */
-        void try_land(std::vector<float> data);
+        void try_land(std::vector<float> data)
+        {
+
+        }
 
 
         /**
          * @brief Выполняет попытку подвинуться на заданные смещение и вращение (по рысканию) относительно позиции, в которой получил команду
          * @param data std::vector<float> - {x, y, z, yaw}
         */
-        void try_move(std::vector<float> data);
+        void try_move(std::vector<float> data)
+        {
+
+        }
 
 
         /**
          * @brief Выполняет попытку взлета на заданную высоту.
          * @param data std::vector<float> - {height}
         */
-        void try_takeoff(std::vector<float> data);
+        void try_takeoff(std::vector<float> data)
+        {
+
+        }
 };
 
 
