@@ -10,13 +10,14 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(MAVSDK REQUIRED)
+find_package(privyaznik_msgs REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
 add_executable(precision_landing_transmitter src/precision_landing_transmitter.cpp)
 target_link_libraries(precision_landing_transmitter MAVSDK::mavsdk)
-ament_target_dependencies(precision_landing_transmitter rclcpp geometry_msgs rclcpp)
+ament_target_dependencies(precision_landing_transmitter rclcpp geometry_msgs rclcpp privyaznik_msgs)
 
 
 if(BUILD_TESTING)

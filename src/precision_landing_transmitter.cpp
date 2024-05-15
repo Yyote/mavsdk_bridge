@@ -3,6 +3,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/vector3.hpp"
+#include "privyaznik_msgs/msg/command.hpp"
 
 #include <mavsdk/mavsdk.h>
 #include <mavsdk/plugins/param/param.h>
@@ -38,15 +39,39 @@ class MavsdkBridgeNode : public rclcpp::Node
             param_handle.set_param_int("LAND_SPEED", 20);
             // param_handle.set_param_int("LOG_DISARMED", 1);
 
-
-            subscription_ = this->create_subscription<geometry_msgs::msg::Vector3>("/camera/landing_position", 10, std::bind(&MavsdkBridgeNode::topic_callback, this, _1));
+            sub_prec_landing = this->create_subscription<geometry_msgs::msg::Vector3>("/camera/landing_position", 10, std::bind(&MavsdkBridgeNode::prec_land_callback, this, _1));
+            sub_commands = this->create_subscription<privyaznik_msgs::msg::Command>("/commands", 10, std::bind(&MavsdkBridgeNode::commands_callback, this, _1));
         }
 
     private:
         Mavsdk mavsdk;
         std::optional<std::shared_ptr<mavsdk::System>> system;
+        rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr sub_prec_landing;
+        rclcpp::Subscription<privyaznik_msgs::msg::Command>::SharedPtr sub_commands;
 
-        void topic_callback(const geometry_msgs::msg::Vector3::SharedPtr coords) const // Проблема такого колбэка в том, что const не позволяет модифицировать переменные за пределами функции
+
+        void commands_callback(const privyaznik_msgs::msg::Command::SharedPtr command) // Проблема такого колбэка в том, что const не позволяет модифицировать переменные за пределами функции
+        {
+            std::vector<float> data = command->data;
+            switch (command->cmd)
+            {
+                case privyaznik_msgs::msg::Command::CMD_LAND:
+                    try_land(data);
+                    break;
+                case privyaznik_msgs::msg::Command::CMD_TAKEOFF:
+                    try_takeoff(data);
+                    break;
+                case privyaznik_msgs::msg::Command::CMD_MOVE:
+                    try_move(data);
+                    break;
+                default:
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "mavsdk_bridge: unknown command.");
+                    throw std::exception();
+            }
+        }
+
+
+        void prec_land_callback(const geometry_msgs::msg::Vector3::SharedPtr coords) // Проблема такого колбэка в том, что const не позволяет модифицировать переменные за пределами функции
         {
             // mavsdk::Telemetry::Position curr_pose;
             // Telemetry telem(*system);
@@ -119,7 +144,27 @@ class MavsdkBridgeNode : public rclcpp::Node
                     std::cerr << "Unhandled Mavlink passthrough result: " << static_cast<int>(res) << std::endl;
             }
         }
-        rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscription_;
+
+
+        /**
+         * @brief Выполняет попытку сесть, как только получена команда. Если не получилось, пытается еще.
+         * @param data std::vector<float> - не несет полезных значений для этой команды
+        */
+        void try_land(std::vector<float> data);
+
+
+        /**
+         * @brief Выполняет попытку подвинуться на заданные смещение и вращение (по рысканию) относительно позиции, в которой получил команду
+         * @param data std::vector<float> - {x, y, z, yaw}
+        */
+        void try_move(std::vector<float> data);
+
+
+        /**
+         * @brief Выполняет попытку взлета на заданную высоту.
+         * @param data std::vector<float> - {height}
+        */
+        void try_takeoff(std::vector<float> data);
 };
 
 
