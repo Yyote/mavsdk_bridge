@@ -68,7 +68,6 @@ class MavsdkBridgeNode : public rclcpp::Node
             utm_to_wgs_client = this->create_client<privyaznik_msgs::srv::UtmToWgs>("utm_to_wgs", rmw_qos_profile_default, cb_group);
             wgs_to_utm_client = this->create_client<privyaznik_msgs::srv::WgsToUtm>("wgs_to_utm", rmw_qos_profile_default, cb_group);
             logic_timer = this->create_wall_timer(50ms, std::bind(&MavsdkBridgeNode::logic_in_timer, this), cb_group);
-            _timer = this->create_wall_timer(500ms, std::bind(&MavsdkBridgeNode::timer_callback, this), cb_group);
 
             ConnectionResult connection_result = mavsdk.add_any_connection("udp://:14550");
 
@@ -174,41 +173,6 @@ class MavsdkBridgeNode : public rclcpp::Node
                 utm_to_wgs_response_future = nullptr;
             }
         }
-
-        void timer_callback()
-        {
-            privyaznik_msgs::srv::WgsToUtm::Request request;
-            privyaznik_msgs::srv::WgsToUtm::Response resp;
-            request.latitude = current_position.latitude_deg;
-            request.longitude = current_position.longitude_deg;
-            request.rel_altitude = current_position.relative_altitude_m;
-            request.abs_altitude = current_position.absolute_altitude_m;
-
-            // std::cout << "BBB\n";
-
-            if (!Client(this->wgs_to_utm_client, request, resp, 500, 10))
-            {
-                RCLCPP_ERROR_STREAM(this->get_logger(), "ERROR! NO RESPONSE FROM COORDINATE TRANSFORM SERVER!");
-                return;
-            }
-            // auto result = this->wgs_to_utm_client->async_send_request(request);
-
-            // std::async(std::launch::async, std::bind(&MavsdkBridgeNode::print_future_result, this, std::placeholders::_1), request); // https://stackoverflow.com/questions/14912635/stdasync-call-of-member-function
-            // if (rclcpp::spin_until_future_complete(this, result) == rclcpp::FutureReturnCode::SUCCESS)
-            // auto resp = result.get();
-            // std::cout << "DDD\n";
-
-            RCLCPP_INFO_STREAM(this->get_logger(), "easting: " << resp.easting << "\nnorthern: " << resp.northern << "\nnorthing:" << resp.northing);
-        }
-
-
-        // void print_future_result(privyaznik_msgs::srv::WgsToUtm::Request::SharedPtr request)
-        // {
-        //     // std::cout << "AAA\n";
-        //     auto result = this->wgs_to_utm_client->async_send_request(request);
-        //     // std::cout << "CCC\n";
-
-        // }
 
 
         void commands_callback(const privyaznik_msgs::msg::Command::SharedPtr command) // Проблема такого колбэка в том, что const не позволяет модифицировать переменные за пределами функции
@@ -349,17 +313,6 @@ int main(int argc, char * argv[])
     rclcpp::executors::MultiThreadedExecutor mt_exec;
     auto node = std::make_shared<MavsdkBridgeNode>();
     
-    // auto pose = node->get_curr_position();
-    // privyaznik_msgs::srv::WgsToUtm::Request request;
-    // std::future<privyaznik_msgs::srv::WgsToUtm::Response> wgs_to_utm_response_future;
-    // request.latitude = pose.latitude_deg;
-    // request.longitude = pose.longitude_deg;
-    // request.rel_altitude = pose.relative_altitude_m;
-    // request.abs_altitude = pose.absolute_altitude_m;
-    
-    // wgs_to_utm_response_future = std::async(std::launch::async, std::bind(&MavsdkBridgeNode::wgs_to_utm, node, std::placeholders::_1), request);
-    // // node->wgs_to_utm(request);
-
 
     mt_exec.add_node(node);
     mt_exec.spin();
