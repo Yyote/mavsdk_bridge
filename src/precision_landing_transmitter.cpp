@@ -1,5 +1,6 @@
 #include <iostream>
 #include <chrono>
+#include <nlohmann/json.hpp>
 
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/vector3.hpp"
@@ -7,11 +8,54 @@
 #include <mavsdk/mavsdk.h>
 #include <mavsdk/plugins/param/param.h>
 #include <mavsdk/plugins/mavlink_passthrough/mavlink_passthrough.h>
+#include <mavsdk/plugins/action/action.h>
 #include <mavsdk/plugins/telemetry/telemetry.h>
 #include <mavsdk/mavlink/common/mavlink.h>
-using mavsdk::MavlinkPassthrough, mavsdk::Mavsdk, mavsdk::ConnectionResult, mavsdk::Param, mavsdk::Telemetry;
+using mavsdk::MavlinkPassthrough, mavsdk::Mavsdk, mavsdk::ConnectionResult, mavsdk::Param, mavsdk::Telemetry, mavsdk::Action;
 using std::placeholders::_1;
+using std::chrono::seconds;
+using std::this_thread::sleep_for;
 
+
+void error_msg (mavsdk::MavlinkPassthrough::Result result) 
+{
+    switch (result) 
+    {
+        case mavsdk::MavlinkPassthrough::Result::Success:
+            std::cout << "Landing target message queued successfully." << std::endl;
+            break;
+        case mavsdk::MavlinkPassthrough::Result::Unknown:
+            std::cerr << "An unknown error occurred while sending the message." << std::endl;
+            break;
+        case mavsdk::MavlinkPassthrough::Result::ConnectionError:
+            std::cerr << "Error connecting to the autopilot. Check the connection and try again." << std::endl;
+            break;
+        case mavsdk::MavlinkPassthrough::Result::CommandNoSystem:
+            std::cerr << "Mavlink system not available." << std::endl;
+            break;
+        case mavsdk::MavlinkPassthrough::Result::CommandBusy:
+            std::cout << "System is busy. Please try again later." << std::endl;
+            break;
+        case mavsdk::MavlinkPassthrough::Result::CommandDenied:
+            std::cerr << "Command to send landing target message has been denied." << std::endl;
+            break;
+        case mavsdk::MavlinkPassthrough::Result::CommandUnsupported:
+            std::cerr << "Sending landing target message is not supported by this autopilot." << std::endl;
+            break;
+        case mavsdk::MavlinkPassthrough::Result::CommandTimeout:
+            std::cerr << "Timeout while sending the landing target message. Check connection and retry." << std::endl;
+            break;
+        case mavsdk::MavlinkPassthrough::Result::CommandTemporarilyRejected:
+            std::cout << "Sending landing target message temporarily rejected. Try again later." << std::endl;
+            break;
+        case mavsdk::MavlinkPassthrough::Result::CommandFailed:
+            std::cerr << "Failed to send the landing target message." << std::endl;
+            break;
+        // Add cases for other specific error handling if needed...
+        default:
+            std::cerr << "Unhandled Mavlink passthrough result: " << static_cast<int>(result) << std::endl;
+    }
+}
 
 
 class MavsdkBridgeNode : public rclcpp::Node
@@ -24,11 +68,13 @@ class MavsdkBridgeNode : public rclcpp::Node
 
             while (connection_result != ConnectionResult::Success) {
                 std::cerr << "Connection failed: " << connection_result << '\n';
+                throw std::exception();
             }
 
             system = mavsdk.first_autopilot(3.0);
             while (!system) {
                 std::cerr << "Timed out waiting for system\n";
+                throw std::exception();
             }
 
             auto param_handle = Param{*system};
@@ -36,7 +82,52 @@ class MavsdkBridgeNode : public rclcpp::Node
             param_handle.set_param_int("PLND_TYPE", 1);
             param_handle.set_param_int("PLND_EST_TYPE", 0);
             param_handle.set_param_int("LAND_SPEED", 20);
+            param_handle.set_param_int("PLND_STRICT", 0);
             // param_handle.set_param_int("LOG_DISARMED", 1);
+
+            telemetry_p = std::make_unique<Telemetry>(system.value());
+            
+            // We want to listen to the altitude of the drone at 1 Hz.
+            telemetry_p->set_rate_position_async(1.0, [](Telemetry::Result set_rate_result){
+                std::cerr << "Setting position rate info: " << set_rate_result << "\n\n";
+            });
+
+            static bool fix_chk = false;
+
+            auto hand = telemetry_p->subscribe_gps_info([](Telemetry::GpsInfo gps) 
+            {
+                std::cout << "--- GPS info ---" << "\n";
+                std::cout << "GPS fix info: " << gps.fix_type << "\n";
+                std::cout << "GPS num of satellites: " << gps.num_satellites << "\n\n";
+                if (gps.num_satellites > 0) fix_chk = 1;
+            });
+
+            while (fix_chk == 0) sleep_for(seconds(3));
+            telemetry_p->unsubscribe_gps_info(hand);
+
+
+            telemetry_p->subscribe_heading([](Telemetry::Heading hdd)
+            {
+                std::cout << "Heading: " << hdd.heading_deg << " deg\n\n";
+            });
+
+
+            telemetry_p->subscribe_position([](Telemetry::Position position) 
+            {
+                std::cout << "Altitude: " << position.relative_altitude_m << "\n\n";
+                std::cout << "--- GPS ---" << "\n";
+                std::cout << "Latitude: " << position.latitude_deg << " deg\n";
+                std::cout << "Longtitude: " << position.longitude_deg << " deg\n\n";
+            });
+
+
+            telemetry_p->subscribe_attitude_euler([](Telemetry::EulerAngle orient)
+            {
+                std::cout << "--- Attitude ---" << "\n";
+                std::cout << "Roll: " << orient.roll_deg << " deg\n";
+                std::cout << "Pitch: " << orient.pitch_deg << " deg\n";
+                std::cout << "Yaw: " << orient.yaw_deg << " deg\n\n";
+            });
 
 
             subscription_ = this->create_subscription<geometry_msgs::msg::Vector3>("/camera/landing_position", 10, std::bind(&MavsdkBridgeNode::topic_callback, this, _1));
@@ -45,6 +136,7 @@ class MavsdkBridgeNode : public rclcpp::Node
     private:
         Mavsdk mavsdk;
         std::optional<std::shared_ptr<mavsdk::System>> system;
+        std::unique_ptr<Telemetry> telemetry_p;
 
         void topic_callback(const geometry_msgs::msg::Vector3::SharedPtr coords) const // Проблема такого колбэка в том, что const не позволяет модифицировать переменные за пределами функции
         {
@@ -55,6 +147,17 @@ class MavsdkBridgeNode : public rclcpp::Node
             // {
             //     curr_pose = pose;
             // });
+
+            // Plugin instances "Telemetry" и "Action"
+            // auto telemetry = Telemetry{system.value()};
+            auto action = Action{system.value()};
+
+            // // We want to listen to the altitude of the drone at 1 Hz.
+            // const auto set_rate_result = telemetry.set_rate_position(1.0);
+            // if (set_rate_result != Telemetry::Result::Success) 
+            // {
+            //     std::cerr << "Setting rate failed: " << set_rate_result << '\n';
+            // }   
 
             float cx, cy;
 
@@ -82,42 +185,8 @@ class MavsdkBridgeNode : public rclcpp::Node
 
             // Send the message using queue_message
             mavsdk::MavlinkPassthrough::Result res = mavlink_passthrough.queue_message(send_landing_target_message);
-            switch (res) 
-            {
-                case mavsdk::MavlinkPassthrough::Result::Success:
-                    std::cout << "Landing target message queued successfully." << std::endl;
-                    break;
-                case mavsdk::MavlinkPassthrough::Result::Unknown:
-                    std::cerr << "An unknown error occurred while sending the message." << std::endl;
-                    break;
-                case mavsdk::MavlinkPassthrough::Result::ConnectionError:
-                    std::cerr << "Error connecting to the autopilot. Check the connection and try again." << std::endl;
-                    break;
-                case mavsdk::MavlinkPassthrough::Result::CommandNoSystem:
-                    std::cerr << "Mavlink system not available." << std::endl;
-                    break;
-                case mavsdk::MavlinkPassthrough::Result::CommandBusy:
-                    std::cout << "System is busy. Please try again later." << std::endl;
-                    break;
-                case mavsdk::MavlinkPassthrough::Result::CommandDenied:
-                    std::cerr << "Command to send landing target message has been denied." << std::endl;
-                    break;
-                case mavsdk::MavlinkPassthrough::Result::CommandUnsupported:
-                    std::cerr << "Sending landing target message is not supported by this autopilot." << std::endl;
-                    break;
-                case mavsdk::MavlinkPassthrough::Result::CommandTimeout:
-                    std::cerr << "Timeout while sending the landing target message. Check connection and retry." << std::endl;
-                    break;
-                case mavsdk::MavlinkPassthrough::Result::CommandTemporarilyRejected:
-                    std::cout << "Sending landing target message temporarily rejected. Try again later." << std::endl;
-                    break;
-                case mavsdk::MavlinkPassthrough::Result::CommandFailed:
-                    std::cerr << "Failed to send the landing target message." << std::endl;
-                    break;
-                // Add cases for other specific error handling if needed...
-                default:
-                    std::cerr << "Unhandled Mavlink passthrough result: " << static_cast<int>(res) << std::endl;
-            }
+            error_msg(res);
+
         }
         rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscription_;
 };
