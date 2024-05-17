@@ -80,6 +80,7 @@ class MavsdkBridgeNode : public rclcpp::Node
                 std::cerr << "Timed out waiting for system\n";
             }
 
+            mavlink_passthrough = std::make_unique<MavlinkPassthrough>(system.value());
             telem_p = std::make_unique<Telemetry>(system.value());
             telem_p->subscribe_position([this](Telemetry::Position position) 
             {
@@ -123,7 +124,6 @@ class MavsdkBridgeNode : public rclcpp::Node
 
         void utm_to_wgs(privyaznik_msgs::srv::UtmToWgs::Request request)
         {
-
             utm_to_wgs_response_future = std::make_shared<rclcpp::Client<privyaznik_msgs::srv::UtmToWgs>::FutureAndRequestId>(this->utm_to_wgs_client->async_send_request(std::make_shared<privyaznik_msgs::srv::UtmToWgs::Request>(request)));
         }
 
@@ -138,6 +138,7 @@ class MavsdkBridgeNode : public rclcpp::Node
     private:
         Mavsdk mavsdk;
         std::unique_ptr<Telemetry> telem_p;
+        std::unique_ptr<MavlinkPassthrough> mavlink_passthrough;
         std::optional<std::shared_ptr<mavsdk::System>> system;
         rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr sub_prec_landing;
         rclcpp::Subscription<privyaznik_msgs::msg::Command>::SharedPtr sub_commands;
@@ -221,52 +222,51 @@ class MavsdkBridgeNode : public rclcpp::Node
             // landing_target_msg.distance = curr_pose.relative_altitude_m;
             // ... (Fill other fields as needed: angle_x, angle_y, distance, etc.) ...
 
-            auto mavlink_passthrough = MavlinkPassthrough{*system};
 
             // Function to pack and send the message
-            auto send_landing_target_message = [this, &mavlink_passthrough, &landing_target_msg](MavlinkAddress mavlink_address, uint8_t channel) {
+            auto send_landing_target_message = [this, &landing_target_msg](MavlinkAddress mavlink_address, uint8_t channel) {
                 mavlink_message_t message;
-                mavlink_msg_landing_target_encode(mavlink_passthrough.get_our_sysid(), channel, &message, &landing_target_msg);
+                mavlink_msg_landing_target_encode(mavlink_passthrough->get_our_sysid(), channel, &message, &landing_target_msg);
                 return message;
             };
 
             // Send the message using queue_message
-            mavsdk::MavlinkPassthrough::Result res = mavlink_passthrough.queue_message(send_landing_target_message);
+            mavsdk::MavlinkPassthrough::Result res = mavlink_passthrough->queue_message(send_landing_target_message);
             switch (res) 
             {
                 case mavsdk::MavlinkPassthrough::Result::Success:
-                    std::cout << "Landing target message queued successfully." << std::endl;
+                    RCLCPP_INFO_STREAM(this->get_logger(), "Landing target message queued successfully." << std::endl);
                     break;
                 case mavsdk::MavlinkPassthrough::Result::Unknown:
-                    std::cerr << "An unknown error occurred while sending the message." << std::endl;
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "An unknown error occurred while sending the message." << std::endl);
                     break;
                 case mavsdk::MavlinkPassthrough::Result::ConnectionError:
-                    std::cerr << "Error connecting to the autopilot. Check the connection and try again." << std::endl;
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Error connecting to the autopilot. Check the connection and try again." << std::endl);
                     break;
                 case mavsdk::MavlinkPassthrough::Result::CommandNoSystem:
-                    std::cerr << "Mavlink system not available." << std::endl;
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Mavlink system not available." << std::endl);
                     break;
                 case mavsdk::MavlinkPassthrough::Result::CommandBusy:
-                    // std::cout << "System is busy. Please try again later." << std::endl;
+                    RCLCPP_WARN_STREAM(this->get_logger(), "System is busy. Please try again later." << std::endl);
                     break;
                 case mavsdk::MavlinkPassthrough::Result::CommandDenied:
-                    std::cerr << "Command to send landing target message has been denied." << std::endl;
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Command to send landing target message has been denied." << std::endl);
                     break;
                 case mavsdk::MavlinkPassthrough::Result::CommandUnsupported:
-                    std::cerr << "Sending landing target message is not supported by this autopilot." << std::endl;
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Sending landing target message is not supported by this autopilot." << std::endl);
                     break;
                 case mavsdk::MavlinkPassthrough::Result::CommandTimeout:
-                    std::cerr << "Timeout while sending the landing target message. Check connection and retry." << std::endl;
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Timeout while sending the landing target message. Check connection and retry." << std::endl);
                     break;
                 case mavsdk::MavlinkPassthrough::Result::CommandTemporarilyRejected:
                     // std::cout << "Sending landing target message temporarily rejected. Try again later." << std::endl;
                     break;
                 case mavsdk::MavlinkPassthrough::Result::CommandFailed:
-                    std::cerr << "Failed to send the landing target message." << std::endl;
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Failed to send the landing target message." << std::endl);
                     break;
                 // Add cases for other specific error handling if needed...
                 default:
-                    std::cerr << "Unhandled Mavlink passthrough result: " << static_cast<int>(res) << std::endl;
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Unhandled Mavlink passthrough result: " << static_cast<int>(res) << std::endl);
             }
         }
 
@@ -298,6 +298,60 @@ class MavsdkBridgeNode : public rclcpp::Node
         void try_takeoff(std::vector<float> data)
         {
 
+        }
+
+
+        void set_home_position_to_current_position()
+        {
+            mavlink_command_int_t cmd;
+            cmd.command = MAV_CMD_DO_SET_HOME;
+            cmd.param1=1;
+
+            // Function to pack and send the message
+            auto send_landing_target_message = [this, &cmd](MavlinkAddress mavlink_address, uint8_t channel) {
+                mavlink_message_t message;
+                mavlink_msg_command_int_encode(mavlink_passthrough->get_our_sysid(), channel, &message, &cmd);
+                return message;
+            };
+
+            // Send the message using queue_message
+            mavsdk::MavlinkPassthrough::Result res = mavlink_passthrough->queue_message(send_landing_target_message);
+            switch (res) 
+            {
+                case mavsdk::MavlinkPassthrough::Result::Success:
+                    RCLCPP_INFO_STREAM(this->get_logger(), "Set home message queued successfully." << std::endl);
+                    break;
+                case mavsdk::MavlinkPassthrough::Result::Unknown:
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "An unknown error occurred while sending the message." << std::endl);
+                    break;
+                case mavsdk::MavlinkPassthrough::Result::ConnectionError:
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Error connecting to the autopilot. Check the connection and try again." << std::endl);
+                    break;
+                case mavsdk::MavlinkPassthrough::Result::CommandNoSystem:
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Mavlink system not available." << std::endl);
+                    break;
+                case mavsdk::MavlinkPassthrough::Result::CommandBusy:
+                    RCLCPP_WARN_STREAM(this->get_logger(), "System is busy. Please try again later." << std::endl);
+                    break;
+                case mavsdk::MavlinkPassthrough::Result::CommandDenied:
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Command to set home has been denied." << std::endl);
+                    break;
+                case mavsdk::MavlinkPassthrough::Result::CommandUnsupported:
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Sending set home message is not supported by this autopilot." << std::endl);
+                    break;
+                case mavsdk::MavlinkPassthrough::Result::CommandTimeout:
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Timeout while sending the set home message. Check connection and retry." << std::endl);
+                    break;
+                case mavsdk::MavlinkPassthrough::Result::CommandTemporarilyRejected:
+                    std::cout << "Sending set home message temporarily rejected. Try again later." << std::endl;
+                    break;
+                case mavsdk::MavlinkPassthrough::Result::CommandFailed:
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Failed to send the set home message." << std::endl);
+                    break;
+                // Add cases for other specific error handling if needed...
+                default:
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Unhandled Mavlink passthrough result: " << static_cast<int>(res) << std::endl);
+            }
         }
 };
 
