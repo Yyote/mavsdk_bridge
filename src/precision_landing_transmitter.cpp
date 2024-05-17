@@ -1,6 +1,7 @@
 #include <iostream>
 #include <chrono>
 #include <nlohmann/json.hpp>
+#include <zmq.hpp>
 
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/vector3.hpp"
@@ -11,11 +12,14 @@
 #include <mavsdk/plugins/action/action.h>
 #include <mavsdk/plugins/telemetry/telemetry.h>
 #include <mavsdk/mavlink/common/mavlink.h>
+
 using mavsdk::MavlinkPassthrough, mavsdk::Mavsdk, mavsdk::ConnectionResult, mavsdk::Param, mavsdk::Telemetry, mavsdk::Action;
 using std::placeholders::_1;
 using std::chrono::seconds;
 using std::this_thread::sleep_for;
+using json = nlohmann::json;
 
+json telemetry_data;
 
 void error_msg (mavsdk::MavlinkPassthrough::Result result) 
 {
@@ -57,6 +61,20 @@ void error_msg (mavsdk::MavlinkPassthrough::Result result)
     }
 }
 
+void create_json() 
+{
+    telemetry_data = 
+    {
+        {"Time", 0},
+        {"Latitude", 0},
+        {"Longtitude", 0},
+        {"Altitude", 0},
+        {"Roll", 0},
+        {"Pitch", 0},
+        {"Yaw", 0},
+        {"Heading", 0}
+    };
+}
 
 class MavsdkBridgeNode : public rclcpp::Node
 {
@@ -66,13 +84,15 @@ class MavsdkBridgeNode : public rclcpp::Node
         {
             ConnectionResult connection_result = mavsdk.add_any_connection("udp://:14550");
 
-            while (connection_result != ConnectionResult::Success) {
+            while (connection_result != ConnectionResult::Success) 
+            {
                 std::cerr << "Connection failed: " << connection_result << '\n';
                 throw std::exception();
             }
 
             system = mavsdk.first_autopilot(3.0);
-            while (!system) {
+            while (!system) 
+            {
                 std::cerr << "Timed out waiting for system\n";
                 throw std::exception();
             }
@@ -88,7 +108,8 @@ class MavsdkBridgeNode : public rclcpp::Node
             telemetry_p = std::make_unique<Telemetry>(system.value());
             
             // We want to listen to the altitude of the drone at 1 Hz.
-            telemetry_p->set_rate_position_async(1.0, [](Telemetry::Result set_rate_result){
+            telemetry_p->set_rate_position_async(1.0, [](Telemetry::Result set_rate_result)
+            {
                 std::cerr << "Setting position rate info: " << set_rate_result << "\n\n";
             });
 
@@ -104,31 +125,38 @@ class MavsdkBridgeNode : public rclcpp::Node
 
             while (fix_chk == 0) sleep_for(seconds(3));
             telemetry_p->unsubscribe_gps_info(hand);
-
-
-            telemetry_p->subscribe_heading([](Telemetry::Heading hdd)
-            {
-                std::cout << "Heading: " << hdd.heading_deg << " deg\n\n";
-            });
-
+            create_json();
 
             telemetry_p->subscribe_position([](Telemetry::Position position) 
             {
-                std::cout << "Altitude: " << position.relative_altitude_m << "\n\n";
+                /*std::cout << "Altitude: " << position.relative_altitude_m << "\n\n";
                 std::cout << "--- GPS ---" << "\n";
                 std::cout << "Latitude: " << position.latitude_deg << " deg\n";
-                std::cout << "Longtitude: " << position.longitude_deg << " deg\n\n";
-            });
+                std::cout << "Longtitude: " << position.longitude_deg << " deg\n\n";*/
 
+                telemetry_data["Altitude"] = position.relative_altitude_m;
+                telemetry_data["Latitude"] = position.latitude_deg;
+                telemetry_data["Longtitude"] = position.longitude_deg;
+            });
 
             telemetry_p->subscribe_attitude_euler([](Telemetry::EulerAngle orient)
             {
-                std::cout << "--- Attitude ---" << "\n";
+                /*std::cout << "--- Attitude ---" << "\n";
                 std::cout << "Roll: " << orient.roll_deg << " deg\n";
                 std::cout << "Pitch: " << orient.pitch_deg << " deg\n";
-                std::cout << "Yaw: " << orient.yaw_deg << " deg\n\n";
+                std::cout << "Yaw: " << orient.yaw_deg << " deg\n\n";*/
+
+                telemetry_data["Roll"] = orient.roll_deg;
+                telemetry_data["Pitch"] = orient.pitch_deg;
+                telemetry_data["Yaw"] = orient.yaw_deg;
             });
 
+            telemetry_p->subscribe_heading([](Telemetry::Heading hdd)
+            {
+                //std::cout << "Heading: " << hdd.heading_deg << " deg\n\n";
+
+                telemetry_data["Heading"] = hdd.heading_deg;
+            });
 
             subscription_ = this->create_subscription<geometry_msgs::msg::Vector3>("/camera/landing_position", 10, std::bind(&MavsdkBridgeNode::topic_callback, this, _1));
         }
@@ -140,24 +168,7 @@ class MavsdkBridgeNode : public rclcpp::Node
 
         void topic_callback(const geometry_msgs::msg::Vector3::SharedPtr coords) const // Проблема такого колбэка в том, что const не позволяет модифицировать переменные за пределами функции
         {
-            // mavsdk::Telemetry::Position curr_pose;
-            // Telemetry telem(*system);
-            // mavsdk::Telemetry::PositionHandle pose_handle = telem.subscribe_position(
-            // [&curr_pose](Telemetry::Position pose)
-            // {
-            //     curr_pose = pose;
-            // });
-
-            // Plugin instances "Telemetry" и "Action"
-            // auto telemetry = Telemetry{system.value()};
-            auto action = Action{system.value()};
-
-            // // We want to listen to the altitude of the drone at 1 Hz.
-            // const auto set_rate_result = telemetry.set_rate_position(1.0);
-            // if (set_rate_result != Telemetry::Result::Success) 
-            // {
-            //     std::cerr << "Setting rate failed: " << set_rate_result << '\n';
-            // }   
+            auto action = Action{system.value()}; 
 
             float cx, cy;
 
@@ -177,11 +188,16 @@ class MavsdkBridgeNode : public rclcpp::Node
             auto mavlink_passthrough = MavlinkPassthrough{*system};
 
             // Function to pack and send the message
-            auto send_landing_target_message = [this, &mavlink_passthrough, &landing_target_msg](MavlinkAddress mavlink_address, uint8_t channel) {
+            auto send_landing_target_message = [this, &mavlink_passthrough, &landing_target_msg](MavlinkAddress mavlink_address, uint8_t channel) 
+            {
                 mavlink_message_t message;
                 mavlink_msg_landing_target_encode(mavlink_passthrough.get_our_sysid(), channel, &message, &landing_target_msg);
                 return message;
             };
+
+            std::string serial_data = telemetry_data.dump();
+            std::cout << serial_data << "\n";
+            std::cout << "\n";
 
             // Send the message using queue_message
             mavsdk::MavlinkPassthrough::Result res = mavlink_passthrough.queue_message(send_landing_target_message);
