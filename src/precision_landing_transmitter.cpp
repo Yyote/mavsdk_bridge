@@ -199,14 +199,6 @@ class MavsdkBridgeNode : public rclcpp::Node
 
         void prec_land_callback(const geometry_msgs::msg::Vector3::SharedPtr coords) // Проблема такого колбэка в том, что const не позволяет модифицировать переменные за пределами функции
         {
-            // mavsdk::Telemetry::Position curr_pose;
-            // Telemetry telem(*system);
-            // mavsdk::Telemetry::PositionHandle pose_handle = telem.subscribe_position(
-            // [&curr_pose](Telemetry::Position pose)
-            // {
-            //     curr_pose = pose;
-            // });
-
             float cx, cy;
 
             cx = coords->x;
@@ -219,9 +211,6 @@ class MavsdkBridgeNode : public rclcpp::Node
             landing_target_msg.frame = MAV_FRAME_BODY_FRD; // Example frame
             landing_target_msg.angle_x = cx;
             landing_target_msg.angle_y = cy;
-            // landing_target_msg.distance = curr_pose.relative_altitude_m;
-            // ... (Fill other fields as needed: angle_x, angle_y, distance, etc.) ...
-
 
             // Function to pack and send the message
             auto send_landing_target_message = [this, &landing_target_msg](MavlinkAddress mavlink_address, uint8_t channel) {
