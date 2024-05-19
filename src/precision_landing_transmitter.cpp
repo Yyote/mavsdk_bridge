@@ -2,6 +2,7 @@
 #include <chrono>
 #include <nlohmann/json.hpp>
 #include <zmq.hpp>
+#include <zmq_addon.hpp>
 
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/vector3.hpp"
@@ -20,6 +21,11 @@ using std::this_thread::sleep_for;
 using json = nlohmann::json;
 
 json telemetry_data;
+
+// Initialize ZMQ
+zmq::context_t ctx{1};
+zmq::socket_t socket{ctx, zmq::socket_type::pub};
+std::string connect = "tcp://192.168.128.174:8080"; // Set TCP address
 
 void error_msg (mavsdk::MavlinkPassthrough::Result result) 
 {
@@ -61,6 +67,7 @@ void error_msg (mavsdk::MavlinkPassthrough::Result result)
     }
 }
 
+// Create JSON message
 void create_json() 
 {
     telemetry_data = 
@@ -114,7 +121,6 @@ class MavsdkBridgeNode : public rclcpp::Node
             });
 
             static bool fix_chk = false;
-
             auto hand = telemetry_p->subscribe_gps_info([](Telemetry::GpsInfo gps) 
             {
                 std::cout << "--- GPS info ---" << "\n";
@@ -125,7 +131,9 @@ class MavsdkBridgeNode : public rclcpp::Node
 
             while (fix_chk == 0) sleep_for(seconds(3));
             telemetry_p->unsubscribe_gps_info(hand);
+
             create_json();
+            socket.bind(connect);
 
             telemetry_p->subscribe_position([](Telemetry::Position position) 
             {
@@ -166,7 +174,7 @@ class MavsdkBridgeNode : public rclcpp::Node
         std::optional<std::shared_ptr<mavsdk::System>> system;
         std::unique_ptr<Telemetry> telemetry_p;
 
-        void topic_callback(const geometry_msgs::msg::Vector3::SharedPtr coords) const // Проблема такого колбэка в том, что const не позволяет модифицировать переменные за пределами функции
+        void topic_callback(const geometry_msgs::msg::Vector3::SharedPtr coords) // Проблема такого колбэка в том, что const не позволяет модифицировать переменные за пределами функции
         {
             auto action = Action{system.value()}; 
 
@@ -196,6 +204,9 @@ class MavsdkBridgeNode : public rclcpp::Node
             };
 
             std::string serial_data = telemetry_data.dump();
+            socket.send(zmq::str_buffer("Telemetry_data_topic"), zmq::send_flags::sndmore);
+            socket.send(zmq::buffer(serial_data));
+
             std::cout << serial_data << "\n";
             std::cout << "\n";
 
