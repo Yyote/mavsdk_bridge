@@ -224,20 +224,30 @@ class MavsdkBridgeNode : public rclcpp::Node
 
     private:
         Mavsdk mavsdk;
+        std::optional<std::shared_ptr<mavsdk::System>> system;
         std::unique_ptr<Telemetry> telemetry;
         std::unique_ptr<MavlinkPassthrough> mavlink_passthrough;
-        std::optional<std::shared_ptr<mavsdk::System>> system;
+        std::unique_ptr<mavsdk::MissionRaw> mission;
+        std::unique_ptr<mavsdk::Action> action;
+
+        Telemetry::Position current_position;
+        Telemetry::Position home_position;
+
         rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr sub_prec_landing;
         rclcpp::Subscription<privyaznik_msgs::msg::Command>::SharedPtr sub_commands;
+
         rclcpp::Client<privyaznik_msgs::srv::UtmToWgs>::SharedPtr utm_to_wgs_client;
         rclcpp::Client<privyaznik_msgs::srv::WgsToUtm>::SharedPtr wgs_to_utm_client;
+
         rclcpp::TimerBase::SharedPtr logic_timer;
         rclcpp::TimerBase::SharedPtr _timer;
-        Telemetry::Position current_position;
+
         rclcpp::CallbackGroup::SharedPtr cb_group;
         rclcpp::SubscriptionOptions sub_options;
+
         std::shared_ptr<rclcpp::Client<privyaznik_msgs::srv::WgsToUtm>::FutureAndRequestId> wgs_to_utm_response_future;
         std::shared_ptr<rclcpp::Client<privyaznik_msgs::srv::UtmToWgs>::FutureAndRequestId> utm_to_wgs_response_future;
+
 
         void logic_in_timer()
         {
@@ -261,12 +271,6 @@ class MavsdkBridgeNode : public rclcpp::Node
                 utm_to_wgs_response_future = nullptr;
             }
         }
-
-        std::unique_ptr<mavsdk::MissionRaw> mission;
-        std::unique_ptr<mavsdk::Action> action;
-        std::unique_ptr<mavsdk::Telemetry> telemetry;
-        Telemetry::Position current_position;
-        Telemetry::Position home_position;
 
 
         void commands_callback(const privyaznik_msgs::msg::Command::SharedPtr command) // Проблема такого колбэка в том, что const не позволяет модифицировать переменные за пределами функции
