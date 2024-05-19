@@ -41,7 +41,22 @@ mavsdk::MissionRaw::MissionItem make_mission_item_wp(
     return new_item;
 }
 
-
+/**
+ * @param _seq
+ * @param _frame
+ * @param _command
+ * @param _current
+ * @param _autocontinue
+ * @param _param1
+ * @param _param2
+ * @param _param3
+ * @param _param4
+ * @param _x
+ * @param _y
+ * @param _z
+ * @param _mission_type
+ * 
+*/
 mavsdk::MissionRaw::MissionItem create_mission_item(uint32_t _seq, uint32_t _frame, uint32_t _command, uint32_t _current, uint32_t _autocontinue,
                                             float _param1, float _param2, float _param3, float _param4, 
                                             float _x, float _y, float _z, 
@@ -72,7 +87,7 @@ std::vector<mavsdk::MissionRaw::MissionItem> create_mission_raw(float home_alt)
     std::cout << "home_position.absolute_altitude_m: " << home_alt << std::endl;
 
    
-    mission_raw_items.push_back(create_mission_item(0, 0, 16, 1, 1, 0, 0, 0, 0, 47.397742, 8.545594, int(std::round(home_alt)), 0));
+    mission_raw_items.push_back(create_mission_item(0, 0, 16, 1, 1, 0, 0, 0, 0, 47.397742, 8.545594, home_alt, 0));
 
     // Add Takeoff
     mission_raw_items.push_back(create_mission_item(1, 3, 22, 0, 1, 0, 0, 0, 0, 0, 0, 30, 0));
@@ -108,6 +123,9 @@ class MavsdkBridgeNode : public rclcpp::Node
             action = std::make_unique<mavsdk::Action>(system.value());
             telemetry = std::make_unique<mavsdk::Telemetry>(system.value());
 
+            telemetry->subscribe_home([this](Telemetry::Position home_in){home_position = home_in;});
+            telemetry->subscribe_position([this](Telemetry::Position curr_pose){current_position = curr_pose;});
+
             auto param_handle = Param{*system};
             param_handle.set_param_float("PLND_ENABLED", 1);
             param_handle.set_param_int("PLND_TYPE", 1);
@@ -117,84 +135,6 @@ class MavsdkBridgeNode : public rclcpp::Node
 
             sub_prec_landing = this->create_subscription<geometry_msgs::msg::Vector3>("/camera/landing_position", 10, std::bind(&MavsdkBridgeNode::prec_land_callback, this, _1));
             sub_commands = this->create_subscription<privyaznik_msgs::msg::Command>("/commands", 10, std::bind(&MavsdkBridgeNode::commands_callback, this, _1));
-
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-            while (!telemetry->health_all_ok()) {
-            std::cout << "Waiting for system to be ready\n";
-            sleep_for(seconds(1));
-            }
-
-            std::cout << "System ready\n";
-            std::cout << "Creating and uploading mission\n";
-
-        
-            Telemetry::Position home_position;
-            while (isnan(home_position.absolute_altitude_m) == true) 
-            {   
-                telemetry->subscribe_position([&home_position](Telemetry::Position position) 
-                {   
-
-                    std::cout << "Altitude: " << position.relative_altitude_m << " m\n";
-                    std::cout<< "x coordinate "<<position.latitude_deg<<std::endl;
-                    std::cout<< "y coordinate "<<position.longitude_deg<<std::endl;
-                    home_position = position;
-                });
-
-                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-            }
-            uint16_t seq = 0;
-
-            std::vector<mavsdk::MissionRaw::MissionItem> mission_items_plan = create_mission_raw(home_position.absolute_altitude_m);
-
-        
-
-            std::cout << "Uploading mission...\n";
-            
-            const mavsdk::MissionRaw::Result upload_result = mission->upload_mission(mission_items_plan);
-
-            if (upload_result != mavsdk::MissionRaw::Result::Success) {
-                std::cerr << "Mission upload failed: " << upload_result << ", exiting.\n";
-            
-            }
-
-            std::cout << "Arming...\n";
-            const mavsdk::Action::Result arm_result = action->arm();
-            while (arm_result != mavsdk::Action::Result::Success) {
-                std::cerr << "Arming failed: " << arm_result << '\n';
-                // return 1;
-            }
-            std::cout << "Armed.\n";
-
-            const mavsdk::Action::Result takeoff_result = action->takeoff();
-            while (takeoff_result != mavsdk::Action::Result::Success) {
-                std::cerr << "Takeoff failed: " << takeoff_result << '\n';
-
-            }
-            std::atomic<bool> want_to_pause{false};
-            // Before starting the mission, we want to be sure to subscribe to the mission progress.
-            mission->subscribe_mission_progress([&want_to_pause](mavsdk::MissionRaw::MissionProgress mission_progress) {
-                std::cout << "Mission status update: " << mission_progress.current << " / "
-                        << mission_progress.total << '\n';
-                if (mission_progress.current >= 2) {
-                    // We can only set a flag here. If we do more request inside the callback,
-                    // we risk blocking the system.
-                    want_to_pause = true;
-                }
-            });
-
-            mavsdk::MissionRaw::Result start_mission_result = mission->start_mission();
-            if (start_mission_result != mavsdk::MissionRaw::Result::Success) {
-                std::cerr << "Starting mission failed: " << start_mission_result << '\n';
-                std::cout << "Commanding RTL...\n";
-                const mavsdk::Action::Result rtl_result = action->return_to_launch();
-                if (rtl_result != mavsdk::Action::Result::Success) {
-                    std::cout << "Failed to command RTL: " << rtl_result << '\n';
-                    
-                }
-                
-            }
-
         }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     private:
@@ -206,6 +146,8 @@ class MavsdkBridgeNode : public rclcpp::Node
         std::unique_ptr<mavsdk::MissionRaw> mission;
         std::unique_ptr<mavsdk::Action> action;
         std::unique_ptr<mavsdk::Telemetry> telemetry;
+        Telemetry::Position current_position;
+        Telemetry::Position home_position;
 
 
         void commands_callback(const privyaznik_msgs::msg::Command::SharedPtr command) // Проблема такого колбэка в том, что const не позволяет модифицировать переменные за пределами функции
@@ -308,48 +250,59 @@ class MavsdkBridgeNode : public rclcpp::Node
          * @param data std::vector<float> - не несет полезных значений для этой команды
         */
         void try_land(std::vector<float> data)
-        {   
-             std::cout << "Pausing mission...\n";
-             const mavsdk::MissionRaw::Result pause_mission_result = mission->pause_mission();
-    
-    
-             if (pause_mission_result != mavsdk::MissionRaw::Result::Success) {
-                std::cerr << "Failed to pause mission:" << pause_mission_result << '\n';
-             }
+        {    
+            std::cout<<"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
+            mavsdk::Action::Result result = action->return_to_launch();
+            if (result != mavsdk::Action::Result::Success) RCLCPP_ERROR_STREAM(this->get_logger(), "Land failed");
+            return;
 
-             std::cout << "Mission paused.\n";
+            //  std::vector<mavsdk::MissionRaw::MissionItem> land_items_plan;
 
-             std::vector<mavsdk::MissionRaw::MissionItem> land_items_plan;
-             land_items_plan.push_back(create_mission_item(4, 3, 20, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0));
+            // land_items_plan.push_back(create_mission_item(0, 0, 16, 1, 1, 0, 0, 0, 0, home_position.latitude_deg, home_position.longitude_deg, home_position.absolute_altitude_m, 0));
 
-             const mavsdk::MissionRaw::Result upload_result = mission->upload_mission(land_items_plan);
+            // // Add Mission Item 2-3
+            // // land_items_plan.push_back(create_mission_item(2, 3, 16, 0, 1, 0, 0, 0, 0, -35.3634, 149.164, 30, 0));
+            // land_items_plan.push_back(create_mission_item(1, 3, 16, 0, 1, 0, 1, 0, 0, current_position.latitude_deg, current_position.longitude_deg, current_position.absolute_altitude_m, 0));
+
+            // // Return to Launch
+            // land_items_plan.push_back(create_mission_item(2, 3, 20, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0));
+
+
+
+            //  const mavsdk::MissionRaw::Result upload_result = mission->upload_mission(land_items_plan);
              
-             if (upload_result != mavsdk::MissionRaw::Result::Success) 
-             {
-             std::cerr << "Mission upload failed: " << upload_result << ", exiting.\n";
+            //  if (upload_result != mavsdk::MissionRaw::Result::Success) 
+            //  {
+            //  std::cerr << "Mission upload failed: " << upload_result << ", exiting.\n";
         
-             }
-             mavsdk::MissionRaw::Result start_mission_again_result = mission->start_mission();
-             if (start_mission_again_result != mavsdk::MissionRaw::Result::Success)
-             {
-             std::cerr << "Starting mission again failed: " << start_mission_again_result << '\n';
-        
-             }
+            //  }
 
-    
-            
-            // const mavsdk::Action::Result land_result = action->land();
-            // if (land_result != mavsdk::Action::Result::Success)
+
+            // std::atomic<bool> want_to_pause{false};
+            // // Before starting the mission, we want to be sure to subscribe to the mission progress.
+            // mission->subscribe_mission_progress([&want_to_pause](mavsdk::MissionRaw::MissionProgress mission_progress) 
             // {
-            //     std::cerr << "Land failed: " << land_result << '\n';
-                
-            // }
+            //     std::cout << "Mission status update: " << mission_progress.current << " / "
+            //             << mission_progress.total << '\n';
+            //     if (mission_progress.current >= 2)
+            //     {
+            //         // We can only set a flag here. If we do more request inside the callback,
+            //         // we risk blocking the system.
+            //         want_to_pause = true;
+            //     }
+            // });
 
-            std::vector<mavsdk::MissionRaw::MissionItem> land_raw_items;
-
-           
-            
-            
+            // mavsdk::MissionRaw::Result start_mission_result = mission->start_mission();
+            // if (start_mission_result != mavsdk::MissionRaw::Result::Success) 
+            // {
+            //     std::cerr << "Starting mission failed: " << start_mission_result << '\n';
+            //     std::cout << "Commanding RTL...\n";
+            //     const mavsdk::Action::Result rtl_result = action->return_to_launch();
+            //     if (rtl_result != mavsdk::Action::Result::Success) {
+            //         std::cout << "Failed to command RTL: " << rtl_result << '\n';
+                    
+            //     }
+            // }  
         }
 
 
@@ -360,7 +313,24 @@ class MavsdkBridgeNode : public rclcpp::Node
         */
         void try_move(std::vector<float> data)
         {
+            float z_coor, yaw, start_yaw;
+            double x_coor, y_coor;
+            // x_coor = data[0]; 
+            // y_coor = data[1]; 
+            // z_coor = data[2]; 
+            x_coor = data[0]; 
+            y_coor = data[1]; 
+            z_coor = data[2] + current_position.absolute_altitude_m; 
+            
+            // start_yaw = data[4];
+            // if (start_yaw>360)
+            yaw = data[4];
 
+            std::cout<<"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
+
+            mavsdk::Action::Result result = action->goto_location(x_coor, y_coor, z_coor, yaw);
+            if (result != mavsdk::Action::Result::Success) RCLCPP_ERROR_STREAM(this->get_logger(), "Move failed");
+            return;
         }
 
 
@@ -370,8 +340,99 @@ class MavsdkBridgeNode : public rclcpp::Node
         */
         void try_takeoff(std::vector<float> data)
         {
+            float z_coor;
+            z_coor = data[0]; 
+            
+             while (!telemetry->health_all_ok())
+            {
+                std::cout << "Waiting for system to be ready\n";
+                sleep_for(seconds(1));
+            }
+            
+            std::cout << "System ready\n";
+            std::cout << "Creating and uploading mission\n";
+
+        
+            Telemetry::Position home_position;
+            while (isnan(home_position.absolute_altitude_m) == true) 
+            {   
+                telemetry->subscribe_position([&home_position](Telemetry::Position position) 
+                {   
+
+                    std::cout << "Altitude: " << position.relative_altitude_m << " m\n";
+                    std::cout<< "x coordinate "<<position.latitude_deg<<std::endl;
+                    std::cout<< "y coordinate "<<position.longitude_deg<<std::endl;
+                    home_position = position;
+                });
+
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            }
+            uint16_t seq = 0;
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+           
+            std::vector<mavsdk::MissionRaw::MissionItem> land_raw_items;
+
+            land_raw_items.push_back(create_mission_item(0, 0, 16, 1, 1, 0, 0, 0, 0, home_position.latitude_deg, home_position.longitude_deg, home_position.absolute_altitude_m, 0));
+            land_raw_items.push_back(create_mission_item(1, 3, 22, 0, 1, 0, 0, 0, 0, 0, 0, z_coor, 0));  
+            
+            std::vector<mavsdk::MissionRaw::MissionItem> mission_items_plan = land_raw_items;
+
+            
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            std::cout << "Uploading mission...\n";
+            
+            const mavsdk::MissionRaw::Result upload_result = mission->upload_mission(mission_items_plan);
+
+            if (upload_result != mavsdk::MissionRaw::Result::Success) 
+            {
+                std::cerr << "Mission upload failed: " << upload_result << ", exiting.\n";
+                return;
+            }
+
+            std::cout << "Arming...\n";
+            const mavsdk::Action::Result arm_result = action->arm();
+            if (arm_result != mavsdk::Action::Result::Success) 
+            {
+                std::cerr << "Arming failed: " << arm_result << '\n';
+                return;
+            }
+            std::cout << "Armed.\n";
+
+            const mavsdk::Action::Result takeoff_result = action->takeoff();
+            if (takeoff_result != mavsdk::Action::Result::Success) 
+            {
+                std::cerr << "Takeoff failed: " << takeoff_result << '\n';
+                return;
+            }
+            std::atomic<bool> want_to_pause{false};
+            // Before starting the mission, we want to be sure to subscribe to the mission progress.
+            mission->subscribe_mission_progress([&want_to_pause](mavsdk::MissionRaw::MissionProgress mission_progress) 
+            {
+                std::cout << "Mission status update: " << mission_progress.current << " / "
+                        << mission_progress.total << '\n';
+                if (mission_progress.current >= 2)
+                {
+                    // We can only set a flag here. If we do more request inside the callback,
+                    // we risk blocking the system.
+                    want_to_pause = true;
+                }
+            });
+
+            mavsdk::MissionRaw::Result start_mission_result = mission->start_mission();
+            if (start_mission_result != mavsdk::MissionRaw::Result::Success) 
+            {
+                std::cerr << "Starting mission failed: " << start_mission_result << '\n';
+                std::cout << "Commanding RTL...\n";
+                const mavsdk::Action::Result rtl_result = action->return_to_launch();
+                if (rtl_result != mavsdk::Action::Result::Success) {
+                    std::cout << "Failed to command RTL: " << rtl_result << '\n';
+                    
+                }
+            }    
             
         }
+
+        
 };
 
 
@@ -387,6 +448,15 @@ int main(int argc, char * argv[])
 
 
 // Угол < 360 (-180 -- 180)
+// if ( (curr_yaw + add_yaw) > 180 || (curr_yaw + add_yaw) < 180 )
+// {
+    
+
+// }
+
 // Учесть длину провода
+// max_len = (local_x)^2 + (local_y)^2 + (z_coor)^2
+// z_coor = ( max_len - ((local_x)^2 + (local_y)^2) ) ^ 1/2
+
 // Высота взлёта
 // Возврат домой
