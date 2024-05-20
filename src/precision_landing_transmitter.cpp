@@ -19,6 +19,7 @@ using std::placeholders::_1;
 using std::chrono::seconds;
 using std::this_thread::sleep_for;
 using json = nlohmann::json;
+using namespace std::chrono_literals;
 
 json telemetry_data;
 
@@ -86,9 +87,11 @@ void create_json()
 class MavsdkBridgeNode : public rclcpp::Node
 {
     public:
+        int32_t old_num_satellites;
+
         MavsdkBridgeNode()
         : Node("minimal_subscriber"), mavsdk{Mavsdk::Configuration{Mavsdk::ComponentType::GroundStation}}
-        {
+        {            
             ConnectionResult connection_result = mavsdk.add_any_connection("udp://:14550");
 
             while (connection_result != ConnectionResult::Success) 
@@ -120,28 +123,35 @@ class MavsdkBridgeNode : public rclcpp::Node
                 std::cerr << "Setting position rate info: " << set_rate_result << "\n\n";
             });
 
-            static bool fix_chk = false;
-            auto hand = telemetry_p->subscribe_gps_info([](Telemetry::GpsInfo gps) 
+            static bool fix_chk, repeat_satellites = false;
+            auto hand = telemetry_p->subscribe_gps_info([this](Telemetry::GpsInfo gps) 
             {
-                std::cout << "--- GPS info ---" << "\n";
-                std::cout << "GPS fix info: " << gps.fix_type << "\n";
-                std::cout << "GPS num of satellites: " << gps.num_satellites << "\n\n";
-                if (gps.num_satellites > 0) fix_chk = 1;
+                if (old_num_satellites != gps.num_satellites && repeat_satellites == true) 
+                {
+                    old_num_satellites = gps.num_satellites;
+                }
+                else
+                {
+                    if (repeat_satellites == false) 
+                    {
+                        std::cout << "--- GPS info ---" << "\n";
+                        std::cout << "GPS fix info: " << gps.fix_type << "\n";
+                        std::cout << "GPS num of satellites: " << gps.num_satellites << "\n\n";
+
+                        if (gps.num_satellites > 0) fix_chk = 1;
+                    }
+                }
             });
 
             while (fix_chk == 0) sleep_for(seconds(3));
-            telemetry_p->unsubscribe_gps_info(hand);
+            // telemetry_p->unsubscribe_gps_info(hand);
+            repeat_satellites = true;
 
             create_json();
             socket.bind(connect);
 
             telemetry_p->subscribe_position([](Telemetry::Position position) 
             {
-                /*std::cout << "Altitude: " << position.relative_altitude_m << "\n\n";
-                std::cout << "--- GPS ---" << "\n";
-                std::cout << "Latitude: " << position.latitude_deg << " deg\n";
-                std::cout << "Longtitude: " << position.longitude_deg << " deg\n\n";*/
-
                 telemetry_data["Altitude"] = position.relative_altitude_m;
                 telemetry_data["Latitude"] = position.latitude_deg;
                 telemetry_data["Longtitude"] = position.longitude_deg;
@@ -149,11 +159,6 @@ class MavsdkBridgeNode : public rclcpp::Node
 
             telemetry_p->subscribe_attitude_euler([](Telemetry::EulerAngle orient)
             {
-                /*std::cout << "--- Attitude ---" << "\n";
-                std::cout << "Roll: " << orient.roll_deg << " deg\n";
-                std::cout << "Pitch: " << orient.pitch_deg << " deg\n";
-                std::cout << "Yaw: " << orient.yaw_deg << " deg\n\n";*/
-
                 telemetry_data["Roll"] = orient.roll_deg;
                 telemetry_data["Pitch"] = orient.pitch_deg;
                 telemetry_data["Yaw"] = orient.yaw_deg;
@@ -161,11 +166,11 @@ class MavsdkBridgeNode : public rclcpp::Node
 
             telemetry_p->subscribe_heading([](Telemetry::Heading hdd)
             {
-                //std::cout << "Heading: " << hdd.heading_deg << " deg\n\n";
-
                 telemetry_data["Heading"] = hdd.heading_deg;
             });
 
+            data_timer = this->create_wall_timer(50ms, std::bind(&MavsdkBridgeNode::data_callback, this));
+            info_timer = this->create_wall_timer(750ms, std::bind(&MavsdkBridgeNode::info_output, this));
             subscription_ = this->create_subscription<geometry_msgs::msg::Vector3>("/camera/landing_position", 10, std::bind(&MavsdkBridgeNode::topic_callback, this, _1));
         }
 
@@ -203,19 +208,36 @@ class MavsdkBridgeNode : public rclcpp::Node
                 return message;
             };
 
-            std::string serial_data = telemetry_data.dump();
-            socket.send(zmq::str_buffer("Telemetry_data_topic"), zmq::send_flags::sndmore);
-            socket.send(zmq::buffer(serial_data));
-
-            std::cout << serial_data << "\n";
-            std::cout << "\n";
-
             // Send the message using queue_message
             mavsdk::MavlinkPassthrough::Result res = mavlink_passthrough.queue_message(send_landing_target_message);
             error_msg(res);
-
         }
+
+        void data_callback()
+        {
+            telemetry_data["Time"] = this->get_clock()->now().seconds();
+
+            std::string serial_data = telemetry_data.dump();
+            socket.send(zmq::str_buffer("Telemetry_data_topic"), zmq::send_flags::sndmore);
+            socket.send(zmq::buffer(serial_data));
+        }
+
+        void info_output() 
+        {
+            std::cout << "\nTIME GOES BACK ---> " << std::to_string(this->get_clock()->now().seconds()) << "\n"; 
+            std::cout << "GPS num of satellites: " << old_num_satellites << "\n\n";
+
+            std::cout << "----- JSON -----" << "\n";
+            for (auto& [key,value] : telemetry_data.items())
+            {
+                std::cout << key << " : " << value << "\n";
+            }
+            std::cout << "----------------" << "\n";
+        }
+
         rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscription_;
+        rclcpp::TimerBase::SharedPtr data_timer;
+        rclcpp::TimerBase::SharedPtr info_timer;
 };
 
 
