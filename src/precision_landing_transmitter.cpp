@@ -313,7 +313,7 @@ class MavsdkBridgeNode : public rclcpp::Node
         */
         void try_move(std::vector<float> data)
         {
-            float z_coor, yaw, start_yaw;
+            float z_coor, yaw, start_yaw, x, res;
             double x_coor, y_coor;
             // x_coor = data[0]; 
             // y_coor = data[1]; 
@@ -321,14 +321,46 @@ class MavsdkBridgeNode : public rclcpp::Node
             x_coor = data[0]; 
             y_coor = data[1]; 
             z_coor = data[2] + current_position.absolute_altitude_m; 
-            
-            // start_yaw = data[4];
-            // if (start_yaw>360)
             yaw = data[4];
+
+            if (yaw>360)
+            {
+                x = yaw - ( (int(yaw))/360 ) *360;
+            }
+
+            else
+            {
+                if (yaw<-360)
+                {
+                    x = yaw - ( (int(yaw))/360 ) *360;
+                }
+
+                else {x = yaw;}
+            }
+
+
+            if (abs(x + start_yaw) <=180)
+            {
+                res = x;
+            }
+
+            else
+            {
+                if (x>=0)
+                {
+                    res = x - 360;
+                }
+                else
+                {
+                    res = x + 360;
+                }
+            }
+
+
 
             std::cout<<"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
 
-            mavsdk::Action::Result result = action->goto_location(x_coor, y_coor, z_coor, yaw);
+            mavsdk::Action::Result result = action->goto_location(x_coor, y_coor, z_coor, res);
             if (result != mavsdk::Action::Result::Success) RCLCPP_ERROR_STREAM(this->get_logger(), "Move failed");
             return;
         }
