@@ -1,10 +1,13 @@
 #include <iostream>
 #include <chrono>
+#include <thread>
 
 #include <mavsdk/plugins/action/action.h>
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/vector3.hpp"
 #include "privyaznik_msgs/msg/command.hpp"
+#include "privyaznik_msgs/srv/utm_to_wgs.hpp"
+#include "privyaznik_msgs/srv/wgs_to_utm.hpp"
 
 #include <mavsdk/plugins/mission_raw/mission_raw.h>
 
@@ -14,10 +17,12 @@
 #include <mavsdk/plugins/telemetry/telemetry.h>
 #include <mavsdk/mavlink/common/mavlink.h>
 using mavsdk::MavlinkPassthrough, mavsdk::Mavsdk, mavsdk::ConnectionResult, mavsdk::Param, mavsdk::Telemetry;
+using namespace std::chrono_literals;
 using std::placeholders::_1;
 
 using std::chrono::seconds;
 using std::this_thread::sleep_for;
+
 
 mavsdk::MissionRaw::MissionItem make_mission_item_wp(
     double latitude_deg, double longitude_deg, float relative_altitude_m,
@@ -40,6 +45,7 @@ mavsdk::MissionRaw::MissionItem make_mission_item_wp(
     new_item.current = static_cast<uint32_t>(is_current);
     return new_item;
 }
+
 
 /**
  * @param _seq
@@ -80,6 +86,7 @@ mavsdk::MissionRaw::MissionItem create_mission_item(uint32_t _seq, uint32_t _fra
     return new_raw_item_nav;
 }
 
+
 std::vector<mavsdk::MissionRaw::MissionItem> create_mission_raw(float home_alt)
 {
     std::vector<mavsdk::MissionRaw::MissionItem> mission_raw_items;
@@ -102,12 +109,118 @@ std::vector<mavsdk::MissionRaw::MissionItem> create_mission_raw(float home_alt)
 }
 
 
+template <typename Request, typename Response, typename ClientBase>
+bool Client(ClientBase &client, Request &req, Response &resp, int timeout_ms, int retry_num=0)
+{
+    bool success = false;
+    do
+    {
+        auto response_ = client->async_send_request(std::make_shared<Request>(req));
+        if (response_.wait_for(std::chrono::milliseconds(timeout_ms)) != std::future_status::ready)
+        {
+            retry_num--;
+        }
+        else if (response_.wait_for(std::chrono::milliseconds(timeout_ms)) == std::future_status::ready)
+        {
+            success = true;
+            resp = *(response_.get());
+            break;
+        }
+    }
+    while (retry_num > -1);
+    return success;
+}
+
+
+
+bool position_is_initialized(Telemetry::Position pos)
+{
+    bool not_initialized = false;
+    Telemetry::Position pose = Telemetry::Position();
+    not_initialized = (pos.absolute_altitude_m == 0 and pos.latitude_deg == 0 and pos.longitude_deg == 0 and pos.relative_altitude_m) or not_initialized;
+
+    return !not_initialized;
+}
+
+
+
+/**
+ * Normalizes an angle to be between -pi and pi.
+ *
+ * This function takes an angle in radians as input and returns a normalized angle
+ * between -pi and pi. It achieves this by iteratively subtracting or adding 2*pi
+ * until the angle falls within the specified range.
+ *
+ * @param angle The angle in radians to be normalized.
+ * @return The normalized angle in radians between -pi and pi.
+ */
+double normalize_angle(double angle)
+{
+    if (angle > M_PI)
+        angle -= 2 * M_PI;
+    if (angle <= -M_PI)
+        angle += 2 * M_PI;
+    else return angle;
+
+    return normalize_angle(angle);
+}
+
+
+/**
+ * Converts a global angle to a local angle.
+ *
+ * This function assumes a right-handed coordinate system where the positive
+ * x-axis points to the right and the positive y-axis points upwards. It
+ * assumes that angles are measured counter-clockwise from the positive x-axis.
+ *
+ * The function converts a global angle to a local angle by subtracting it from
+ * pi/2. This means that a zero global angle (pointing to the right) will be
+ * converted to a local angle of pi/2 (pointing upwards).
+ *
+ * @param angle The angle in radians in the global coordinate system.
+ * @return The angle in radians in the local coordinate system.
+ */
+double global_to_local(double angle)
+{
+    return - angle + M_PI_2;
+}
+
+/**
+ * Converts a local angle to a global angle.
+ *
+ * This function assumes a right-handed coordinate system where the positive
+ * x-axis points to the right and the positive y-axis points upwards. It
+ * assumes that angles are measured counter-clockwise from the positive x-axis.
+ *
+ * The function converts a local angle to a global angle by subtracting it from
+ * pi/2. This means that a local angle of pi/2 (pointing upwards) will be
+ * converted to a global angle of zero (pointing to the right).
+ *
+ * @param angle The angle in radians in the local coordinate system.
+ * @return The angle in radians in the global coordinate system.
+ */
+double local_to_global(double angle)
+{
+    return - angle + M_PI_2;
+}
+
+
+
+
 class MavsdkBridgeNode : public rclcpp::Node
 {
     public:
         MavsdkBridgeNode()
         : Node("minimal_subscriber"), mavsdk{Mavsdk::Configuration{Mavsdk::ComponentType::GroundStation}}
         {
+            cb_group = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant); 
+            sub_options.callback_group = cb_group;
+            sub_prec_landing = this->create_subscription<geometry_msgs::msg::Vector3>("camera/landing_position", 10, std::bind(&MavsdkBridgeNode::prec_land_callback, this, _1), sub_options);
+            sub_commands = this->create_subscription<privyaznik_msgs::msg::Command>("commands", 10, std::bind(&MavsdkBridgeNode::commands_callback, this, _1), sub_options);
+            utm_to_wgs_client = this->create_client<privyaznik_msgs::srv::UtmToWgs>("utm_to_wgs", rmw_qos_profile_default, cb_group);
+            wgs_to_utm_client = this->create_client<privyaznik_msgs::srv::WgsToUtm>("wgs_to_utm", rmw_qos_profile_default, cb_group);
+            logic_timer = this->create_wall_timer(50ms, std::bind(&MavsdkBridgeNode::logic_in_timer, this), cb_group);
+
             ConnectionResult connection_result = mavsdk.add_any_connection("udp://:14550");
 
             while (connection_result != ConnectionResult::Success) {
@@ -122,9 +235,24 @@ class MavsdkBridgeNode : public rclcpp::Node
             mission = std::make_unique<mavsdk::MissionRaw>(system.value());
             action = std::make_unique<mavsdk::Action>(system.value());
             telemetry = std::make_unique<mavsdk::Telemetry>(system.value());
+            mavlink_passthrough = std::make_unique<MavlinkPassthrough>(system.value());
 
             telemetry->subscribe_home([this](Telemetry::Position home_in){home_position = home_in;});
             telemetry->subscribe_position([this](Telemetry::Position curr_pose){current_position = curr_pose;});
+            telemetry->subscribe_attitude_euler([this](Telemetry::EulerAngle orient){current_orientation = orient;});
+
+            bool fix = false;
+            auto hand = telemetry->subscribe_gps_info([&fix](Telemetry::GpsInfo info)
+            {
+                if (info.num_satellites > 0) fix = true;
+            });
+
+            while (!fix) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            privyaznik_msgs::srv::WgsToUtm::Request request;
+            request.latitude = current_position.latitude_deg;
+            request.longitude = current_position.longitude_deg;
+            request.rel_altitude = current_position.relative_altitude_m;
+            request.abs_altitude = current_position.absolute_altitude_m;
 
             auto param_handle = Param{*system};
             param_handle.set_param_float("PLND_ENABLED", 1);
@@ -132,22 +260,84 @@ class MavsdkBridgeNode : public rclcpp::Node
             param_handle.set_param_int("PLND_EST_TYPE", 0);
             param_handle.set_param_int("LAND_SPEED", 20);
             // param_handle.set_param_int("LOG_DISARMED", 1);
-
-            sub_prec_landing = this->create_subscription<geometry_msgs::msg::Vector3>("/camera/landing_position", 10, std::bind(&MavsdkBridgeNode::prec_land_callback, this, _1));
-            sub_commands = this->create_subscription<privyaznik_msgs::msg::Command>("/commands", 10, std::bind(&MavsdkBridgeNode::commands_callback, this, _1));
         }
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+        void wgs_to_utm(privyaznik_msgs::srv::WgsToUtm::Request request)
+        {
+            // auto request = std::make_shared<privyaznik_msgs::srv::WgsToUtm::Request>();
+            // privyaznik_msgs::srv::WgsToUtm::Request req = request;
+            // privyaznik_msgs::srv::WgsToUtm::Response wgs_to_utm_response_future;
+
+            wgs_to_utm_response_future = std::make_shared<rclcpp::Client<privyaznik_msgs::srv::WgsToUtm>::FutureAndRequestId>(this->wgs_to_utm_client->async_send_request(std::make_shared<privyaznik_msgs::srv::WgsToUtm::Request>(request)));
+        }
+
+
+
+        void utm_to_wgs(privyaznik_msgs::srv::UtmToWgs::Request request)
+        {
+            utm_to_wgs_response_future = std::make_shared<rclcpp::Client<privyaznik_msgs::srv::UtmToWgs>::FutureAndRequestId>(this->utm_to_wgs_client->async_send_request(std::make_shared<privyaznik_msgs::srv::UtmToWgs::Request>(request)));
+        }
+
+
+
+        Telemetry::Position get_curr_position()
+        {
+            return current_position;
+        }
+
+
     private:
         Mavsdk mavsdk;
+        bool is_in_flight;
         std::optional<std::shared_ptr<mavsdk::System>> system;
+        std::unique_ptr<Telemetry> telemetry;
+        std::unique_ptr<MavlinkPassthrough> mavlink_passthrough;
+        std::unique_ptr<mavsdk::MissionRaw> mission;
+        std::unique_ptr<mavsdk::Action> action;
+
+        Telemetry::Position current_position;
+        Telemetry::Position home_position;
+        Telemetry::EulerAngle current_orientation;
+
         rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr sub_prec_landing;
         rclcpp::Subscription<privyaznik_msgs::msg::Command>::SharedPtr sub_commands;
 
-        std::unique_ptr<mavsdk::MissionRaw> mission;
-        std::unique_ptr<mavsdk::Action> action;
-        std::unique_ptr<mavsdk::Telemetry> telemetry;
-        Telemetry::Position current_position;
-        Telemetry::Position home_position;
+        rclcpp::Client<privyaznik_msgs::srv::UtmToWgs>::SharedPtr utm_to_wgs_client;
+        rclcpp::Client<privyaznik_msgs::srv::WgsToUtm>::SharedPtr wgs_to_utm_client;
+
+        rclcpp::TimerBase::SharedPtr logic_timer;
+        rclcpp::TimerBase::SharedPtr _timer;
+
+        rclcpp::CallbackGroup::SharedPtr cb_group;
+        rclcpp::SubscriptionOptions sub_options;
+
+        std::shared_ptr<rclcpp::Client<privyaznik_msgs::srv::WgsToUtm>::FutureAndRequestId> wgs_to_utm_response_future;
+        std::shared_ptr<rclcpp::Client<privyaznik_msgs::srv::UtmToWgs>::FutureAndRequestId> utm_to_wgs_response_future;
+
+
+        void logic_in_timer()
+        {
+            // if (wgs_to_utm_response_future and wgs_to_utm_response_future->wait_for(std::chrono::milliseconds(50)) == std::future_status::ready)
+            // {
+            //     privyaznik_msgs::srv::WgsToUtm::Response resp = *wgs_to_utm_response_future->get();
+            //     RCLCPP_INFO_STREAM(this->get_logger(), "Test wgs to utm: " << resp.northing);
+            //     wgs_to_utm_response_future = nullptr;
+            //     privyaznik_msgs::srv::UtmToWgs::Request req;
+            //     req.easting = resp.easting;
+            //     // req.northern = false;
+            //     req.northing = resp.northing;
+            //     req.zone_letter = resp.zone_letter;
+            //     req.zone_number = resp.zone_number;
+            //     utm_to_wgs(req);
+            // }
+            // if (utm_to_wgs_response_future and utm_to_wgs_response_future->wait_for(std::chrono::milliseconds(50)) == std::future_status::ready)
+            // {
+            //     privyaznik_msgs::srv::UtmToWgs::Response resp = *utm_to_wgs_response_future->get();
+            //     RCLCPP_INFO_STREAM(this->get_logger(), "Test utm to wgs: " << resp.longitude);
+            //     utm_to_wgs_response_future = nullptr;
+            // }
+        }
 
 
         void commands_callback(const privyaznik_msgs::msg::Command::SharedPtr command) // Проблема такого колбэка в том, что const не позволяет модифицировать переменные за пределами функции
@@ -162,7 +352,7 @@ class MavsdkBridgeNode : public rclcpp::Node
                     try_takeoff(data);
                     break;
                 case privyaznik_msgs::msg::Command::CMD_MOVE:
-                    try_move(data);
+                    // try_move(data);
                     break;
                 default:
                     RCLCPP_ERROR_STREAM(this->get_logger(), "mavsdk_bridge: unknown command.");
@@ -173,14 +363,6 @@ class MavsdkBridgeNode : public rclcpp::Node
 
         void prec_land_callback(const geometry_msgs::msg::Vector3::SharedPtr coords) // Проблема такого колбэка в том, что const не позволяет модифицировать переменные за пределами функции
         {
-            // mavsdk::Telemetry::Position curr_pose;
-            // Telemetry telem(*system);
-            // mavsdk::Telemetry::PositionHandle pose_handle = telem.subscribe_position(
-            // [&curr_pose](Telemetry::Position pose)
-            // {
-            //     curr_pose = pose;
-            // });
-
             float cx, cy;
 
             cx = coords->x;
@@ -193,55 +375,51 @@ class MavsdkBridgeNode : public rclcpp::Node
             landing_target_msg.frame = MAV_FRAME_BODY_FRD; // Example frame
             landing_target_msg.angle_x = cx;
             landing_target_msg.angle_y = cy;
-            // landing_target_msg.distance = curr_pose.relative_altitude_m;
-            // ... (Fill other fields as needed: angle_x, angle_y, distance, etc.) ...
-
-            auto mavlink_passthrough = MavlinkPassthrough{*system};
 
             // Function to pack and send the message
-            auto send_landing_target_message = [this, &mavlink_passthrough, &landing_target_msg](MavlinkAddress mavlink_address, uint8_t channel) {
+            auto send_landing_target_message = [this, &landing_target_msg](MavlinkAddress mavlink_address, uint8_t channel) {
                 mavlink_message_t message;
-                mavlink_msg_landing_target_encode(mavlink_passthrough.get_our_sysid(), channel, &message, &landing_target_msg);
+                mavlink_msg_landing_target_encode(mavlink_passthrough->get_our_sysid(), channel, &message, &landing_target_msg);
                 return message;
             };
 
             // Send the message using queue_message
-            mavsdk::MavlinkPassthrough::Result res = mavlink_passthrough.queue_message(send_landing_target_message);
+            mavsdk::MavlinkPassthrough::Result res = mavlink_passthrough->queue_message(send_landing_target_message);
             switch (res) 
             {
                 case mavsdk::MavlinkPassthrough::Result::Success:
-                    std::cout << "Landing target message queued successfully." << std::endl;
+                    RCLCPP_INFO_STREAM(this->get_logger(), "Landing target message queued successfully." << std::endl);
                     break;
                 case mavsdk::MavlinkPassthrough::Result::Unknown:
-                    std::cerr << "An unknown error occurred while sending the message." << std::endl;
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "An unknown error occurred while sending the message." << std::endl);
                     break;
                 case mavsdk::MavlinkPassthrough::Result::ConnectionError:
-                    std::cerr << "Error connecting to the autopilot. Check the connection and try again." << std::endl;
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Error connecting to the autopilot. Check the connection and try again." << std::endl);
                     break;
                 case mavsdk::MavlinkPassthrough::Result::CommandNoSystem:
-                    std::cerr << "Mavlink system not available." << std::endl;
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Mavlink system not available." << std::endl);
                     break;
                 case mavsdk::MavlinkPassthrough::Result::CommandBusy:
-                    std::cout << "System is busy. Please try again later." << std::endl;
+                    RCLCPP_WARN_STREAM(this->get_logger(), "System is busy. Please try again later." << std::endl);
                     break;
                 case mavsdk::MavlinkPassthrough::Result::CommandDenied:
-                    std::cerr << "Command to send landing target message has been denied." << std::endl;
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Command to send landing target message has been denied." << std::endl);
                     break;
                 case mavsdk::MavlinkPassthrough::Result::CommandUnsupported:
-                    std::cerr << "Sending landing target message is not supported by this autopilot." << std::endl;
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Sending landing target message is not supported by this autopilot." << std::endl);
                     break;
                 case mavsdk::MavlinkPassthrough::Result::CommandTimeout:
-                    std::cerr << "Timeout while sending the landing target message. Check connection and retry." << std::endl;
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Timeout while sending the landing target message. Check connection and retry." << std::endl);
                     break;
                 case mavsdk::MavlinkPassthrough::Result::CommandTemporarilyRejected:
-                    std::cout << "Sending landing target message temporarily rejected. Try again later." << std::endl;
+                    // std::cout << "Sending landing target message temporarily rejected. Try again later." << std::endl;
                     break;
                 case mavsdk::MavlinkPassthrough::Result::CommandFailed:
-                    std::cerr << "Failed to send the landing target message." << std::endl;
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Failed to send the landing target message." << std::endl);
                     break;
                 // Add cases for other specific error handling if needed...
                 default:
-                    std::cerr << "Unhandled Mavlink passthrough result: " << static_cast<int>(res) << std::endl;
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Unhandled Mavlink passthrough result: " << static_cast<int>(res) << std::endl);
             }
         }
 
@@ -255,54 +433,6 @@ class MavsdkBridgeNode : public rclcpp::Node
             mavsdk::Action::Result result = action->return_to_launch();
             if (result != mavsdk::Action::Result::Success) RCLCPP_ERROR_STREAM(this->get_logger(), "Land failed");
             return;
-
-            //  std::vector<mavsdk::MissionRaw::MissionItem> land_items_plan;
-
-            // land_items_plan.push_back(create_mission_item(0, 0, 16, 1, 1, 0, 0, 0, 0, home_position.latitude_deg, home_position.longitude_deg, home_position.absolute_altitude_m, 0));
-
-            // // Add Mission Item 2-3
-            // // land_items_plan.push_back(create_mission_item(2, 3, 16, 0, 1, 0, 0, 0, 0, -35.3634, 149.164, 30, 0));
-            // land_items_plan.push_back(create_mission_item(1, 3, 16, 0, 1, 0, 1, 0, 0, current_position.latitude_deg, current_position.longitude_deg, current_position.absolute_altitude_m, 0));
-
-            // // Return to Launch
-            // land_items_plan.push_back(create_mission_item(2, 3, 20, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0));
-
-
-
-            //  const mavsdk::MissionRaw::Result upload_result = mission->upload_mission(land_items_plan);
-             
-            //  if (upload_result != mavsdk::MissionRaw::Result::Success) 
-            //  {
-            //  std::cerr << "Mission upload failed: " << upload_result << ", exiting.\n";
-        
-            //  }
-
-
-            // std::atomic<bool> want_to_pause{false};
-            // // Before starting the mission, we want to be sure to subscribe to the mission progress.
-            // mission->subscribe_mission_progress([&want_to_pause](mavsdk::MissionRaw::MissionProgress mission_progress) 
-            // {
-            //     std::cout << "Mission status update: " << mission_progress.current << " / "
-            //             << mission_progress.total << '\n';
-            //     if (mission_progress.current >= 2)
-            //     {
-            //         // We can only set a flag here. If we do more request inside the callback,
-            //         // we risk blocking the system.
-            //         want_to_pause = true;
-            //     }
-            // });
-
-            // mavsdk::MissionRaw::Result start_mission_result = mission->start_mission();
-            // if (start_mission_result != mavsdk::MissionRaw::Result::Success) 
-            // {
-            //     std::cerr << "Starting mission failed: " << start_mission_result << '\n';
-            //     std::cout << "Commanding RTL...\n";
-            //     const mavsdk::Action::Result rtl_result = action->return_to_launch();
-            //     if (rtl_result != mavsdk::Action::Result::Success) {
-            //         std::cout << "Failed to command RTL: " << rtl_result << '\n';
-                    
-            //     }
-            // }  
         }
 
 
@@ -313,54 +443,43 @@ class MavsdkBridgeNode : public rclcpp::Node
         */
         void try_move(std::vector<float> data)
         {
-            float z_coor, yaw, start_yaw, x, res;
-            double x_coor, y_coor;
-            // x_coor = data[0]; 
-            // y_coor = data[1]; 
-            // z_coor = data[2]; 
-            x_coor = data[0]; 
-            y_coor = data[1]; 
-            z_coor = data[2] + current_position.absolute_altitude_m; 
-            yaw = data[4];
+            float altitude, yaw, start_yaw;
+            double easting, northing;
+            // easting = data[0]; 
+            // northing = data[1]; 
+            // altitude = data[2];
 
-            if (yaw>360)
-            {
-                x = yaw - ( (int(yaw))/360 ) *360;
-            }
+            privyaznik_msgs::srv::WgsToUtm::Request req;
+            req.abs_altitude = current_position.absolute_altitude_m;
+            req.rel_altitude = current_position.relative_altitude_m;
+            req.latitude = current_position.latitude_deg;
+            req.longitude = current_position.longitude_deg;
+            req.rel_altitude = current_position.relative_altitude_m;
 
-            else
-            {
-                if (yaw<-360)
-                {
-                    x = yaw - ( (int(yaw))/360 ) *360;
-                }
+            wgs_to_utm(req);
 
-                else {x = yaw;}
-            }
+            while (wgs_to_utm_response_future->wait_for(50ms) != std::future_status::ready) RCLCPP_WARN_STREAM(this->get_logger(), "Try move converting WGS to UTM. Waiting...");
+            std::shared_ptr<privyaznik_msgs::srv::WgsToUtm_Response> response = wgs_to_utm_response_future->get();
 
+            double local_yaw = global_to_local(current_orientation.yaw_deg);
 
-            if (abs(x + start_yaw) <=180)
-            {
-                res = x;
-            }
+            easting = data.at(0) * cos(local_yaw) - data.at(1) * sin(local_yaw) + response->easting;
+            northing = data.at(0) * sin(local_yaw) + data.at(1) * cos(local_yaw) + response->northing;
+            altitude = data.at(2) + current_position.absolute_altitude_m; 
+            
+            yaw = local_to_global(normalize_angle(data.at(3) + local_yaw));
+            
+            privyaznik_msgs::srv::UtmToWgs::Request u_req;
+            u_req.easting = easting;
+            u_req.northing = northing;
+            u_req.zone_letter = response->zone_letter;
+            u_req.zone_number = response->zone_number;
+            utm_to_wgs(u_req);
 
-            else
-            {
-                if (x>=0)
-                {
-                    res = x - 360;
-                }
-                else
-                {
-                    res = x + 360;
-                }
-            }
+            while (utm_to_wgs_response_future->wait_for(50ms) != std::future_status::ready) RCLCPP_WARN_STREAM(this->get_logger(), "Try move converting UTM to WGS. Waiting...");
+            std::shared_ptr<privyaznik_msgs::srv::UtmToWgs_Response> goal = utm_to_wgs_response_future->get();
 
-
-
-            std::cout<<"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
-
-            mavsdk::Action::Result result = action->goto_location(x_coor, y_coor, z_coor, res);
+            mavsdk::Action::Result result = action->goto_location(goal->latitude, goal->longitude, altitude, yaw);
             if (result != mavsdk::Action::Result::Success) RCLCPP_ERROR_STREAM(this->get_logger(), "Move failed");
             return;
         }
@@ -372,10 +491,17 @@ class MavsdkBridgeNode : public rclcpp::Node
         */
         void try_takeoff(std::vector<float> data)
         {
+            if (telemetry->landed_state() != Telemetry::LandedState::OnGround)
+            {
+                return;
+            }
+
+            set_home_position_to_current_position();
+
             float z_coor;
             z_coor = data[0]; 
             
-             while (!telemetry->health_all_ok())
+            while (!telemetry->health_all_ok())
             {
                 std::cout << "Waiting for system to be ready\n";
                 sleep_for(seconds(1));
@@ -400,8 +526,7 @@ class MavsdkBridgeNode : public rclcpp::Node
                 std::this_thread::sleep_for(std::chrono::milliseconds(1000));
             }
             uint16_t seq = 0;
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-           
+
             std::vector<mavsdk::MissionRaw::MissionItem> land_raw_items;
 
             land_raw_items.push_back(create_mission_item(0, 0, 16, 1, 1, 0, 0, 0, 0, home_position.latitude_deg, home_position.longitude_deg, home_position.absolute_altitude_m, 0));
@@ -409,8 +534,6 @@ class MavsdkBridgeNode : public rclcpp::Node
             
             std::vector<mavsdk::MissionRaw::MissionItem> mission_items_plan = land_raw_items;
 
-            
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             std::cout << "Uploading mission...\n";
             
             const mavsdk::MissionRaw::Result upload_result = mission->upload_mission(mission_items_plan);
@@ -465,6 +588,60 @@ class MavsdkBridgeNode : public rclcpp::Node
         }
 
         
+
+
+        void set_home_position_to_current_position()
+        {
+            mavlink_command_int_t cmd;
+            cmd.command = MAV_CMD_DO_SET_HOME;
+            cmd.param1=1;
+
+            // Function to pack and send the message
+            auto send_landing_target_message = [this, &cmd](MavlinkAddress mavlink_address, uint8_t channel) {
+                mavlink_message_t message;
+                mavlink_msg_command_int_encode(mavlink_passthrough->get_our_sysid(), channel, &message, &cmd);
+                return message;
+            };
+
+            // Send the message using queue_message
+            mavsdk::MavlinkPassthrough::Result res = mavlink_passthrough->queue_message(send_landing_target_message);
+            switch (res) 
+            {
+                case mavsdk::MavlinkPassthrough::Result::Success:
+                    RCLCPP_INFO_STREAM(this->get_logger(), "Set home message queued successfully." << std::endl);
+                    break;
+                case mavsdk::MavlinkPassthrough::Result::Unknown:
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "An unknown error occurred while sending the message." << std::endl);
+                    break;
+                case mavsdk::MavlinkPassthrough::Result::ConnectionError:
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Error connecting to the autopilot. Check the connection and try again." << std::endl);
+                    break;
+                case mavsdk::MavlinkPassthrough::Result::CommandNoSystem:
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Mavlink system not available." << std::endl);
+                    break;
+                case mavsdk::MavlinkPassthrough::Result::CommandBusy:
+                    RCLCPP_WARN_STREAM(this->get_logger(), "System is busy. Please try again later." << std::endl);
+                    break;
+                case mavsdk::MavlinkPassthrough::Result::CommandDenied:
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Command to set home has been denied." << std::endl);
+                    break;
+                case mavsdk::MavlinkPassthrough::Result::CommandUnsupported:
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Sending set home message is not supported by this autopilot." << std::endl);
+                    break;
+                case mavsdk::MavlinkPassthrough::Result::CommandTimeout:
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Timeout while sending the set home message. Check connection and retry." << std::endl);
+                    break;
+                case mavsdk::MavlinkPassthrough::Result::CommandTemporarilyRejected:
+                    std::cout << "Sending set home message temporarily rejected. Try again later." << std::endl;
+                    break;
+                case mavsdk::MavlinkPassthrough::Result::CommandFailed:
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Failed to send the set home message." << std::endl);
+                    break;
+                // Add cases for other specific error handling if needed...
+                default:
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Unhandled Mavlink passthrough result: " << static_cast<int>(res) << std::endl);
+            }
+        }
 };
 
 
@@ -473,8 +650,16 @@ class MavsdkBridgeNode : public rclcpp::Node
 int main(int argc, char * argv[])
 {
     rclcpp::init(argc, argv);
-    rclcpp::spin(std::make_shared<MavsdkBridgeNode>());
-    rclcpp::shutdown();
+    // rclcpp::spin(std::make_shared<MavsdkBridgeNode>());
+    // rclcpp::shutdown();
+
+    rclcpp::executors::MultiThreadedExecutor mt_exec;
+    auto node = std::make_shared<MavsdkBridgeNode>();
+    
+
+    mt_exec.add_node(node);
+    mt_exec.spin();
+
     return 0;
 }
 
