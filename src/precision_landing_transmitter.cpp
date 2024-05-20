@@ -23,6 +23,7 @@ using std::placeholders::_1;
 using std::chrono::seconds;
 using std::this_thread::sleep_for;
 
+
 mavsdk::MissionRaw::MissionItem make_mission_item_wp(
     double latitude_deg, double longitude_deg, float relative_altitude_m,
     float speed_m_s, bool is_fly_through, uint16_t &seq, bool is_current)
@@ -44,6 +45,7 @@ mavsdk::MissionRaw::MissionItem make_mission_item_wp(
     new_item.current = static_cast<uint32_t>(is_current);
     return new_item;
 }
+
 
 /**
  * @param _seq
@@ -83,6 +85,7 @@ mavsdk::MissionRaw::MissionItem create_mission_item(uint32_t _seq, uint32_t _fra
     new_raw_item_nav.mission_type = 0;
     return new_raw_item_nav;
 }
+
 
 std::vector<mavsdk::MissionRaw::MissionItem> create_mission_raw(float home_alt)
 {
@@ -129,6 +132,7 @@ bool Client(ClientBase &client, Request &req, Response &resp, int timeout_ms, in
 }
 
 
+
 bool position_is_initialized(Telemetry::Position pos)
 {
     bool not_initialized = false;
@@ -138,6 +142,67 @@ bool position_is_initialized(Telemetry::Position pos)
     return !not_initialized;
 }
 
+
+
+/**
+ * Normalizes an angle to be between -pi and pi.
+ *
+ * This function takes an angle in radians as input and returns a normalized angle
+ * between -pi and pi. It achieves this by iteratively subtracting or adding 2*pi
+ * until the angle falls within the specified range.
+ *
+ * @param angle The angle in radians to be normalized.
+ * @return The normalized angle in radians between -pi and pi.
+ */
+double normalize_angle(double angle)
+{
+    if (angle > M_PI)
+        angle -= 2 * M_PI;
+    if (angle <= -M_PI)
+        angle += 2 * M_PI;
+    else return angle;
+
+    return normalize_angle(angle);
+}
+
+
+/**
+ * Converts a global angle to a local angle.
+ *
+ * This function assumes a right-handed coordinate system where the positive
+ * x-axis points to the right and the positive y-axis points upwards. It
+ * assumes that angles are measured counter-clockwise from the positive x-axis.
+ *
+ * The function converts a global angle to a local angle by subtracting it from
+ * pi/2. This means that a zero global angle (pointing to the right) will be
+ * converted to a local angle of pi/2 (pointing upwards).
+ *
+ * @param angle The angle in radians in the global coordinate system.
+ * @return The angle in radians in the local coordinate system.
+ */
+double global_to_local(double angle)
+{
+    return - angle + M_PI_2;
+}
+
+/**
+ * Converts a local angle to a global angle.
+ *
+ * This function assumes a right-handed coordinate system where the positive
+ * x-axis points to the right and the positive y-axis points upwards. It
+ * assumes that angles are measured counter-clockwise from the positive x-axis.
+ *
+ * The function converts a local angle to a global angle by subtracting it from
+ * pi/2. This means that a local angle of pi/2 (pointing upwards) will be
+ * converted to a global angle of zero (pointing to the right).
+ *
+ * @param angle The angle in radians in the local coordinate system.
+ * @return The angle in radians in the global coordinate system.
+ */
+double local_to_global(double angle)
+{
+    return - angle + M_PI_2;
+}
 
 
 
@@ -174,6 +239,7 @@ class MavsdkBridgeNode : public rclcpp::Node
 
             telemetry->subscribe_home([this](Telemetry::Position home_in){home_position = home_in;});
             telemetry->subscribe_position([this](Telemetry::Position curr_pose){current_position = curr_pose;});
+            telemetry->subscribe_attitude_euler([this](Telemetry::EulerAngle orient){current_orientation = orient;});
 
             bool fix = false;
             auto hand = telemetry->subscribe_gps_info([&fix](Telemetry::GpsInfo info)
@@ -187,7 +253,6 @@ class MavsdkBridgeNode : public rclcpp::Node
             request.longitude = current_position.longitude_deg;
             request.rel_altitude = current_position.relative_altitude_m;
             request.abs_altitude = current_position.absolute_altitude_m;
-            wgs_to_utm(request);
 
             auto param_handle = Param{*system};
             param_handle.set_param_float("PLND_ENABLED", 1);
@@ -224,6 +289,7 @@ class MavsdkBridgeNode : public rclcpp::Node
 
     private:
         Mavsdk mavsdk;
+        bool is_in_flight;
         std::optional<std::shared_ptr<mavsdk::System>> system;
         std::unique_ptr<Telemetry> telemetry;
         std::unique_ptr<MavlinkPassthrough> mavlink_passthrough;
@@ -232,6 +298,7 @@ class MavsdkBridgeNode : public rclcpp::Node
 
         Telemetry::Position current_position;
         Telemetry::Position home_position;
+        Telemetry::EulerAngle current_orientation;
 
         rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr sub_prec_landing;
         rclcpp::Subscription<privyaznik_msgs::msg::Command>::SharedPtr sub_commands;
@@ -251,25 +318,25 @@ class MavsdkBridgeNode : public rclcpp::Node
 
         void logic_in_timer()
         {
-            if (wgs_to_utm_response_future and wgs_to_utm_response_future->wait_for(std::chrono::milliseconds(50)) == std::future_status::ready)
-            {
-                privyaznik_msgs::srv::WgsToUtm::Response resp = *wgs_to_utm_response_future->get();
-                RCLCPP_INFO_STREAM(this->get_logger(), "Test wgs to utm: " << resp.northing);
-                wgs_to_utm_response_future = nullptr;
-                privyaznik_msgs::srv::UtmToWgs::Request req;
-                req.easting = resp.easting;
-                // req.northern = false;
-                req.northing = resp.northing;
-                req.zone_letter = resp.zone_letter;
-                req.zone_number = resp.zone_number;
-                utm_to_wgs(req);
-            }
-            if (utm_to_wgs_response_future and utm_to_wgs_response_future->wait_for(std::chrono::milliseconds(50)) == std::future_status::ready)
-            {
-                privyaznik_msgs::srv::UtmToWgs::Response resp = *utm_to_wgs_response_future->get();
-                RCLCPP_INFO_STREAM(this->get_logger(), "Test utm to wgs: " << resp.longitude);
-                utm_to_wgs_response_future = nullptr;
-            }
+            // if (wgs_to_utm_response_future and wgs_to_utm_response_future->wait_for(std::chrono::milliseconds(50)) == std::future_status::ready)
+            // {
+            //     privyaznik_msgs::srv::WgsToUtm::Response resp = *wgs_to_utm_response_future->get();
+            //     RCLCPP_INFO_STREAM(this->get_logger(), "Test wgs to utm: " << resp.northing);
+            //     wgs_to_utm_response_future = nullptr;
+            //     privyaznik_msgs::srv::UtmToWgs::Request req;
+            //     req.easting = resp.easting;
+            //     // req.northern = false;
+            //     req.northing = resp.northing;
+            //     req.zone_letter = resp.zone_letter;
+            //     req.zone_number = resp.zone_number;
+            //     utm_to_wgs(req);
+            // }
+            // if (utm_to_wgs_response_future and utm_to_wgs_response_future->wait_for(std::chrono::milliseconds(50)) == std::future_status::ready)
+            // {
+            //     privyaznik_msgs::srv::UtmToWgs::Response resp = *utm_to_wgs_response_future->get();
+            //     RCLCPP_INFO_STREAM(this->get_logger(), "Test utm to wgs: " << resp.longitude);
+            //     utm_to_wgs_response_future = nullptr;
+            // }
         }
 
 
@@ -285,7 +352,7 @@ class MavsdkBridgeNode : public rclcpp::Node
                     try_takeoff(data);
                     break;
                 case privyaznik_msgs::msg::Command::CMD_MOVE:
-                    try_move(data);
+                    // try_move(data);
                     break;
                 default:
                     RCLCPP_ERROR_STREAM(this->get_logger(), "mavsdk_bridge: unknown command.");
@@ -376,22 +443,43 @@ class MavsdkBridgeNode : public rclcpp::Node
         */
         void try_move(std::vector<float> data)
         {
-            float z_coor, yaw, start_yaw;
-            double x_coor, y_coor;
-            // x_coor = data[0]; 
-            // y_coor = data[1]; 
-            // z_coor = data[2]; 
-            x_coor = data[0]; 
-            y_coor = data[1]; 
-            z_coor = data[2] + current_position.absolute_altitude_m; 
+            float altitude, yaw, start_yaw;
+            double easting, northing;
+            // easting = data[0]; 
+            // northing = data[1]; 
+            // altitude = data[2];
+
+            privyaznik_msgs::srv::WgsToUtm::Request req;
+            req.abs_altitude = current_position.absolute_altitude_m;
+            req.rel_altitude = current_position.relative_altitude_m;
+            req.latitude = current_position.latitude_deg;
+            req.longitude = current_position.longitude_deg;
+            req.rel_altitude = current_position.relative_altitude_m;
+
+            wgs_to_utm(req);
+
+            while (wgs_to_utm_response_future->wait_for(50ms) != std::future_status::ready) RCLCPP_WARN_STREAM(this->get_logger(), "Try move converting WGS to UTM. Waiting...");
+            std::shared_ptr<privyaznik_msgs::srv::WgsToUtm_Response> response = wgs_to_utm_response_future->get();
+
+            double local_yaw = global_to_local(current_orientation.yaw_deg);
+
+            easting = data.at(0) * cos(local_yaw) - data.at(1) * sin(local_yaw) + response->easting;
+            northing = data.at(0) * sin(local_yaw) + data.at(1) * cos(local_yaw) + response->northing;
+            altitude = data.at(2) + current_position.absolute_altitude_m; 
             
-            // start_yaw = data[4];
-            // if (start_yaw>360)
-            yaw = data[4];
+            yaw = local_to_global(normalize_angle(data.at(3) + local_yaw));
+            
+            privyaznik_msgs::srv::UtmToWgs::Request u_req;
+            u_req.easting = easting;
+            u_req.northing = northing;
+            u_req.zone_letter = response->zone_letter;
+            u_req.zone_number = response->zone_number;
+            utm_to_wgs(u_req);
 
-            std::cout<<"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
+            while (utm_to_wgs_response_future->wait_for(50ms) != std::future_status::ready) RCLCPP_WARN_STREAM(this->get_logger(), "Try move converting UTM to WGS. Waiting...");
+            std::shared_ptr<privyaznik_msgs::srv::UtmToWgs_Response> goal = utm_to_wgs_response_future->get();
 
-            mavsdk::Action::Result result = action->goto_location(x_coor, y_coor, z_coor, yaw);
+            mavsdk::Action::Result result = action->goto_location(goal->latitude, goal->longitude, altitude, yaw);
             if (result != mavsdk::Action::Result::Success) RCLCPP_ERROR_STREAM(this->get_logger(), "Move failed");
             return;
         }
@@ -403,10 +491,17 @@ class MavsdkBridgeNode : public rclcpp::Node
         */
         void try_takeoff(std::vector<float> data)
         {
+            if (telemetry->landed_state() != Telemetry::LandedState::OnGround)
+            {
+                return;
+            }
+
+            set_home_position_to_current_position();
+
             float z_coor;
             z_coor = data[0]; 
             
-             while (!telemetry->health_all_ok())
+            while (!telemetry->health_all_ok())
             {
                 std::cout << "Waiting for system to be ready\n";
                 sleep_for(seconds(1));
@@ -431,8 +526,7 @@ class MavsdkBridgeNode : public rclcpp::Node
                 std::this_thread::sleep_for(std::chrono::milliseconds(1000));
             }
             uint16_t seq = 0;
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-           
+
             std::vector<mavsdk::MissionRaw::MissionItem> land_raw_items;
 
             land_raw_items.push_back(create_mission_item(0, 0, 16, 1, 1, 0, 0, 0, 0, home_position.latitude_deg, home_position.longitude_deg, home_position.absolute_altitude_m, 0));
@@ -440,8 +534,6 @@ class MavsdkBridgeNode : public rclcpp::Node
             
             std::vector<mavsdk::MissionRaw::MissionItem> mission_items_plan = land_raw_items;
 
-            
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             std::cout << "Uploading mission...\n";
             
             const mavsdk::MissionRaw::Result upload_result = mission->upload_mission(mission_items_plan);
