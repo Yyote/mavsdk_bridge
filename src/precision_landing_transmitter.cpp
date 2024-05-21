@@ -8,6 +8,7 @@
 #include "privyaznik_msgs/msg/command.hpp"
 #include "privyaznik_msgs/srv/utm_to_wgs.hpp"
 #include "privyaznik_msgs/srv/wgs_to_utm.hpp"
+#include "privyaznik_msgs/srv/command.hpp"
 
 #include <mavsdk/plugins/mission_raw/mission_raw.h>
 
@@ -216,11 +217,11 @@ class MavsdkBridgeNode : public rclcpp::Node
             cb_group = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant); 
             sub_options.callback_group = cb_group;
             sub_prec_landing = this->create_subscription<geometry_msgs::msg::Vector3>("camera/landing_position", 10, std::bind(&MavsdkBridgeNode::prec_land_callback, this, _1), sub_options);
-            sub_commands = this->create_subscription<privyaznik_msgs::msg::Command>("commands", 10, std::bind(&MavsdkBridgeNode::commands_callback, this, _1), sub_options);
+            //sub_commands = this->create_subscription<privyaznik_msgs::msg::Command>("commands", 10, std::bind(&MavsdkBridgeNode::commands_callback, this, _1), sub_options);
             utm_to_wgs_client = this->create_client<privyaznik_msgs::srv::UtmToWgs>("utm_to_wgs", rmw_qos_profile_default, cb_group);
             wgs_to_utm_client = this->create_client<privyaznik_msgs::srv::WgsToUtm>("wgs_to_utm", rmw_qos_profile_default, cb_group);
             logic_timer = this->create_wall_timer(50ms, std::bind(&MavsdkBridgeNode::logic_in_timer, this), cb_group);
-
+            cmd_service = this->create_service<privyaznik_msgs::srv::Command>("commands", std::bind(&MavsdkBridgeNode::commands_callback, this, _1), rmw_qos_profile_default, cb_group);
             ConnectionResult connection_result = mavsdk.add_any_connection("udp://:14550");
 
             while (connection_result != ConnectionResult::Success) {
@@ -312,6 +313,8 @@ class MavsdkBridgeNode : public rclcpp::Node
         rclcpp::CallbackGroup::SharedPtr cb_group;
         rclcpp::SubscriptionOptions sub_options;
 
+        rclcpp::Service<privyaznik_msgs::srv::Command>::SharedPtr cmd_service;
+
         std::shared_ptr<rclcpp::Client<privyaznik_msgs::srv::WgsToUtm>::FutureAndRequestId> wgs_to_utm_response_future;
         std::shared_ptr<rclcpp::Client<privyaznik_msgs::srv::UtmToWgs>::FutureAndRequestId> utm_to_wgs_response_future;
 
@@ -340,23 +343,23 @@ class MavsdkBridgeNode : public rclcpp::Node
         }
 
 
-        void commands_callback(const privyaznik_msgs::msg::Command::SharedPtr command) // Проблема такого колбэка в том, что const не позволяет модифицировать переменные за пределами функции
+        void commands_callback(const privyaznik_msgs::srv::Command::Request::SharedPtr request, privyaznik_msgs::srv::Command::Response::SharedPtr response ) // Проблема такого колбэка в том, что const не позволяет модифицировать переменные за пределами функции
         {
-            std::vector<float> data = command->data;
-            switch (command->cmd)
+            std::vector<float> data = request->data;
+            switch (request->cmd)
             {
-                case privyaznik_msgs::msg::Command::CMD_LAND:
-                    try_land(data);
+                case privyaznik_msgs::srv::Command::Request::CMD_LAND:
+                    response->result = try_land(data);
                     break;
-                case privyaznik_msgs::msg::Command::CMD_TAKEOFF:
-                    try_takeoff(data);
+                case privyaznik_msgs::srv::Command::Request::CMD_TAKEOFF:
+                    response->result = try_takeoff(data);
                     break;
-                case privyaznik_msgs::msg::Command::CMD_MOVE:
+                case privyaznik_msgs::srv::Command::Request::CMD_MOVE:
                     // try_move(data);
                     break;
                 default:
                     RCLCPP_ERROR_STREAM(this->get_logger(), "mavsdk_bridge: unknown command.");
-                    throw std::exception();
+                    
             }
         }
 
@@ -427,12 +430,28 @@ class MavsdkBridgeNode : public rclcpp::Node
          * @brief Выполняет попытку сесть, как только получена команда. Если не получилось, пытается еще.
          * @param data std::vector<float> - не несет полезных значений для этой команды
         */
-        void try_land(std::vector<float> data)
+        uint8_t try_land(std::vector<float> data)
         {    
             std::cout<<"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
             mavsdk::Action::Result result = action->return_to_launch();
-            if (result != mavsdk::Action::Result::Success) RCLCPP_ERROR_STREAM(this->get_logger(), "Land failed");
-            return;
+            if (result != mavsdk::Action::Result::Success) 
+            {
+                RCLCPP_ERROR_STREAM(this->get_logger(), "Land failed");
+                return privyaznik_msgs::srv::Command::Response::RES_FAILED;
+            }
+            while (telemetry->landed_state() != Telemetry::LandedState::Landing)
+            {
+                std::this_thread::sleep_for(20ms);
+            }
+            while (telemetry->landed_state() != Telemetry::LandedState::OnGround)
+            {
+                std::this_thread::sleep_for(100ms);
+                if (telemetry->landed_state() == Telemetry::LandedState::InAir)
+                {
+                    return privyaznik_msgs::srv::Command::Response::RES_FAILED;
+                }
+            }
+            return privyaznik_msgs::srv::Command::Response::RES_SUCCESS;
         }
 
 
@@ -489,11 +508,11 @@ class MavsdkBridgeNode : public rclcpp::Node
          * @brief Выполняет попытку взлета на заданную высоту.
          * @param data std::vector<float> - {height}
         */
-        void try_takeoff(std::vector<float> data)
+        uint8_t try_takeoff(std::vector<float> data)
         {
             if (telemetry->landed_state() != Telemetry::LandedState::OnGround)
-            {
-                return;
+            {   
+                return privyaznik_msgs::srv::Command::Response::RES_FAILED;
             }
 
             set_home_position_to_current_position();
@@ -510,21 +529,22 @@ class MavsdkBridgeNode : public rclcpp::Node
             std::cout << "System ready\n";
             std::cout << "Creating and uploading mission\n";
 
-        
-            Telemetry::Position home_position;
-            while (isnan(home_position.absolute_altitude_m) == true) 
-            {   
-                telemetry->subscribe_position([&home_position](Telemetry::Position position) 
-                {   
 
-                    std::cout << "Altitude: " << position.relative_altitude_m << " m\n";
-                    std::cout<< "x coordinate "<<position.latitude_deg<<std::endl;
-                    std::cout<< "y coordinate "<<position.longitude_deg<<std::endl;
-                    home_position = position;
-                });
 
-                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-            }
+            // Telemetry::Position home_position;
+            // while (isnan(home_position.absolute_altitude_m) == true) 
+            // {   
+            //     telemetry->subscribe_position([&home_position](Telemetry::Position position) 
+            //     {   
+
+            //         std::cout << "Altitude: " << position.relative_altitude_m << " m\n";
+            //         std::cout<< "x coordinate "<<position.latitude_deg<<std::endl;
+            //         std::cout<< "y coordinate "<<position.longitude_deg<<std::endl;
+            //         home_position = position;
+            //     });
+
+            //     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            // }
             uint16_t seq = 0;
 
             std::vector<mavsdk::MissionRaw::MissionItem> land_raw_items;
@@ -541,7 +561,7 @@ class MavsdkBridgeNode : public rclcpp::Node
             if (upload_result != mavsdk::MissionRaw::Result::Success) 
             {
                 std::cerr << "Mission upload failed: " << upload_result << ", exiting.\n";
-                return;
+                return privyaznik_msgs::srv::Command::Response::RES_FAILED;
             }
 
             std::cout << "Arming...\n";
@@ -549,7 +569,7 @@ class MavsdkBridgeNode : public rclcpp::Node
             if (arm_result != mavsdk::Action::Result::Success) 
             {
                 std::cerr << "Arming failed: " << arm_result << '\n';
-                return;
+                return privyaznik_msgs::srv::Command::Response::RES_FAILED;
             }
             std::cout << "Armed.\n";
 
@@ -557,19 +577,20 @@ class MavsdkBridgeNode : public rclcpp::Node
             if (takeoff_result != mavsdk::Action::Result::Success) 
             {
                 std::cerr << "Takeoff failed: " << takeoff_result << '\n';
-                return;
+                return privyaznik_msgs::srv::Command::Response::RES_FAILED;
             }
-            std::atomic<bool> want_to_pause{false};
+            std::atomic<bool>mission_complete = false;
             // Before starting the mission, we want to be sure to subscribe to the mission progress.
-            mission->subscribe_mission_progress([&want_to_pause](mavsdk::MissionRaw::MissionProgress mission_progress) 
+            auto ms_handle = mission->subscribe_mission_progress([&mission_complete](mavsdk::MissionRaw::MissionProgress mission_progress) 
             {
                 std::cout << "Mission status update: " << mission_progress.current << " / "
                         << mission_progress.total << '\n';
-                if (mission_progress.current >= 2)
+                if (mission_progress.current == mission_progress.total)
                 {
                     // We can only set a flag here. If we do more request inside the callback,
                     // we risk blocking the system.
-                    want_to_pause = true;
+
+                    mission_complete = true;
                 }
             });
 
@@ -581,9 +602,18 @@ class MavsdkBridgeNode : public rclcpp::Node
                 const mavsdk::Action::Result rtl_result = action->return_to_launch();
                 if (rtl_result != mavsdk::Action::Result::Success) {
                     std::cout << "Failed to command RTL: " << rtl_result << '\n';
-                    
+                    return privyaznik_msgs::srv::Command::Response::RES_FAILED;
                 }
+                mission->unsubscribe_mission_progress(ms_handle);
             }    
+
+            while (not mission_complete)
+            {
+                std::this_thread::sleep_for(100ms);
+            }
+
+            mission->unsubscribe_mission_progress(ms_handle);
+            return privyaznik_msgs::srv::Command::Response::RES_SUCCESS;
             
         }
 
