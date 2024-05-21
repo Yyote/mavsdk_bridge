@@ -19,7 +19,7 @@
 #include <mavsdk/mavlink/common/mavlink.h>
 using mavsdk::MavlinkPassthrough, mavsdk::Mavsdk, mavsdk::ConnectionResult, mavsdk::Param, mavsdk::Telemetry;
 using namespace std::chrono_literals;
-using std::placeholders::_1;
+using std::placeholders::_1, std::placeholders::_2;
 
 using std::chrono::seconds;
 using std::this_thread::sleep_for;
@@ -221,7 +221,7 @@ class MavsdkBridgeNode : public rclcpp::Node
             utm_to_wgs_client = this->create_client<privyaznik_msgs::srv::UtmToWgs>("utm_to_wgs", rmw_qos_profile_default, cb_group);
             wgs_to_utm_client = this->create_client<privyaznik_msgs::srv::WgsToUtm>("wgs_to_utm", rmw_qos_profile_default, cb_group);
             logic_timer = this->create_wall_timer(50ms, std::bind(&MavsdkBridgeNode::logic_in_timer, this), cb_group);
-            cmd_service = this->create_service<privyaznik_msgs::srv::Command>("commands", std::bind(&MavsdkBridgeNode::commands_callback, this, _1), rmw_qos_profile_default, cb_group);
+            cmd_service = this->create_service<privyaznik_msgs::srv::Command>("commands", std::bind(&MavsdkBridgeNode::commands_callback, this, _1, _2), rmw_qos_profile_default, cb_group);
             ConnectionResult connection_result = mavsdk.add_any_connection("udp://:14550");
 
             while (connection_result != ConnectionResult::Success) {
@@ -306,7 +306,7 @@ class MavsdkBridgeNode : public rclcpp::Node
 
         rclcpp::Client<privyaznik_msgs::srv::UtmToWgs>::SharedPtr utm_to_wgs_client;
         rclcpp::Client<privyaznik_msgs::srv::WgsToUtm>::SharedPtr wgs_to_utm_client;
-
+    
         rclcpp::TimerBase::SharedPtr logic_timer;
         rclcpp::TimerBase::SharedPtr _timer;
 
@@ -343,7 +343,7 @@ class MavsdkBridgeNode : public rclcpp::Node
         }
 
 
-        void commands_callback(const privyaznik_msgs::srv::Command::Request::SharedPtr request, privyaznik_msgs::srv::Command::Response::SharedPtr response ) // Проблема такого колбэка в том, что const не позволяет модифицировать переменные за пределами функции
+        void commands_callback(const privyaznik_msgs::srv::Command::Request::SharedPtr request, privyaznik_msgs::srv::Command::Response::SharedPtr response) // Проблема такого колбэка в том, что const не позволяет модифицировать переменные за пределами функции
         {
             std::vector<float> data = request->data;
             switch (request->cmd)
