@@ -316,42 +316,24 @@ class MavsdkBridgeNode : public rclcpp::Node
             telemetry = std::make_unique<mavsdk::Telemetry>(system.value());
             mavlink_passthrough = std::make_unique<MavlinkPassthrough>(system.value());
 
-            telemetry->subscribe_home([this](Telemetry::Position home_in){home_position = home_in;});
-            telemetry->subscribe_position([this](Telemetry::Position curr_pose){current_position = curr_pose;});
-            telemetry->subscribe_attitude_euler([this](Telemetry::EulerAngle orient){current_orientation = orient;});
-            
-
-            bool fix = false;
-            auto hand = telemetry->subscribe_gps_info([&fix](Telemetry::GpsInfo info)
-            {
-                if (info.num_satellites > 0) fix = true;
-            });
-
-            while (!fix) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-            privyaznik_msgs::srv::WgsToUtm::Request request;
-            request.latitude = current_position.latitude_deg;
-            request.longitude = current_position.longitude_deg;
-            request.rel_altitude = current_position.relative_altitude_m;
-            request.abs_altitude = current_position.absolute_altitude_m;
-
             auto param_handle = Param{*system};
-            param_handle.set_param_float("PLND_ENABLED", 1);
-            param_handle.set_param_int("PLND_TYPE", 1);
-            param_handle.set_param_int("PLND_EST_TYPE", 0);
-            param_handle.set_param_int("LAND_SPEED", 20);
-            param_handle.set_param_int("PLND_STRICT", 0);
+            // param_handle.set_param_float("PLND_ENABLED", 1);
+            // param_handle.set_param_int("PLND_TYPE", 1);
+            // param_handle.set_param_int("PLND_EST_TYPE", 0);
+            // param_handle.set_param_int("LAND_SPEED", 20);
+            // param_handle.set_param_int("PLND_STRICT", 0);
             // param_handle.set_param_int("LOG_DISARMED", 1);
 
-            telemetry_p = std::make_unique<Telemetry>(system.value());
+            telemetry = std::make_unique<Telemetry>(system.value());
             
             // We want to listen to the altitude of the drone at 1 Hz.
-            telemetry_p->set_rate_position_async(1.0, [](Telemetry::Result set_rate_result)
+            telemetry->set_rate_position_async(1.0, [](Telemetry::Result set_rate_result)
             {
                 std::cerr << "Setting position rate info: " << set_rate_result << "\n\n";
             });
 
             static bool fix_chk, repeat_satellites = false;
-            auto hand = telemetry_p->subscribe_gps_info([this](Telemetry::GpsInfo gps) 
+            auto hand = telemetry->subscribe_gps_info([this](Telemetry::GpsInfo gps) 
             {
                 if (old_num_satellites != gps.num_satellites && repeat_satellites == true) 
                 {
@@ -371,27 +353,32 @@ class MavsdkBridgeNode : public rclcpp::Node
             });
 
             while (fix_chk == 0) sleep_for(seconds(3));
-            // telemetry_p->unsubscribe_gps_info(hand);
+            // telemetry->unsubscribe_gps_info(hand);
             repeat_satellites = true;
 
             create_json();
             socket.bind(connect);
 
-            telemetry_p->subscribe_position([](Telemetry::Position position) 
+
+            telemetry->subscribe_home([this](Telemetry::Position home_in){home_position = home_in;});
+
+            telemetry->subscribe_position([this](Telemetry::Position position) 
             {
                 telemetry_data["Altitude"] = position.relative_altitude_m;
                 telemetry_data["Latitude"] = position.latitude_deg;
                 telemetry_data["Longtitude"] = position.longitude_deg;
+                current_position = position;
             });
 
-            telemetry_p->subscribe_attitude_euler([](Telemetry::EulerAngle orient)
+            telemetry->subscribe_attitude_euler([this](Telemetry::EulerAngle orient)
             {
                 telemetry_data["Roll"] = orient.roll_deg;
                 telemetry_data["Pitch"] = orient.pitch_deg;
                 telemetry_data["Yaw"] = orient.yaw_deg;
+                current_orientation = orient;
             });
 
-            telemetry_p->subscribe_heading([](Telemetry::Heading hdd)
+            telemetry->subscribe_heading([](Telemetry::Heading hdd)
             {
                 telemetry_data["Heading"] = hdd.heading_deg;
             });
