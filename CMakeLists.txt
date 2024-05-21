@@ -39,6 +39,9 @@ add_executable(client_commands src/client_commands.cpp)
 target_link_libraries(client_commands MAVSDK::mavsdk)
 ament_target_dependencies(client_commands rclcpp geometry_msgs rclcpp privyaznik_msgs)
 
+add_executable(client_commands_takeoff src/client_commands_takeoff.cpp)
+target_link_libraries(client_commands_takeoff MAVSDK::mavsdk)
+ament_target_dependencies(client_commands_takeoff rclcpp geometry_msgs rclcpp privyaznik_msgs)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -58,6 +61,7 @@ install(TARGETS
   try_takeoff
   try_land
   client_commands
+  client_commands_takeoff
   DESTINATION lib/${PROJECT_NAME}
 )
 
