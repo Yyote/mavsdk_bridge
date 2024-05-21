@@ -16,8 +16,8 @@ find_package(privyaznik_msgs REQUIRED)
 # find_package(<dependency> REQUIRED)
 
 add_executable(precision_landing_transmitter src/precision_landing_transmitter.cpp)
-target_link_libraries(precision_landing_transmitter MAVSDK::mavsdk)
-ament_target_dependencies(precision_landing_transmitter rclcpp geometry_msgs rclcpp privyaznik_msgs)
+target_link_libraries(precision_landing_transmitter MAVSDK::mavsdk zmq)
+ament_target_dependencies(precision_landing_transmitter rclcpp geometry_msgs privyaznik_msgs)
 
 
 add_executable(try_move src/try_move.cpp)
