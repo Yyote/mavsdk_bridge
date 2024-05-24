@@ -41,8 +41,8 @@ int main(int argc, char **argv)
 
 
   auto request = std::make_shared<privyaznik_msgs::srv::Command::Request>();
-  request->data = {};
-  request->cmd = 2;
+  request->data = {10.5};
+  request->cmd = 1;
 
 
   while (!client->wait_for_service(1s)) {
