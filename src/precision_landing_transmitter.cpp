@@ -38,6 +38,8 @@ using std::placeholders::_1, std::placeholders::_2;
 using std::chrono::seconds;
 using std::this_thread::sleep_for;
 
+std::string zmq_connect = "tcp://192.168.128.174:8080"; // Set TCP address for ZMQ
+std::string mavlink_addr = "serial:///dev/ttyUSB0:57600"; // Set | type+address+baud | to connect mavsdk to mavlink
 
 mavsdk::MissionRaw::MissionItem make_mission_item_wp(
     double latitude_deg, double longitude_deg, float relative_altitude_m,
@@ -225,7 +227,6 @@ json telemetry_data;
 // Initialize ZMQ
 zmq::context_t ctx{1};
 zmq::socket_t socket{ctx, zmq::socket_type::pub};
-std::string connect = "tcp://192.168.128.174:8080"; // Set TCP address
 
 void isok(int num) 
 {
@@ -323,7 +324,7 @@ class MavsdkBridgeNode : public rclcpp::Node
             data_timer = this->create_wall_timer(50ms, std::bind(&MavsdkBridgeNode::data_callback, this));
             info_timer = this->create_wall_timer(750ms, std::bind(&MavsdkBridgeNode::info_output, this));
 
-            ConnectionResult connection_result = mavsdk.add_any_connection("udp://:14550");
+            ConnectionResult connection_result = mavsdk.add_any_connection(mavlink_addr);
 
             while (connection_result != ConnectionResult::Success) 
             {
@@ -384,8 +385,7 @@ class MavsdkBridgeNode : public rclcpp::Node
             repeat_satellites = true;
 
             create_json();
-            socket.bind(connect);
-
+            socket.bind(zmq_connect);
 
             telemetry->subscribe_home([this](Telemetry::Position home_in){home_position = home_in;});
 
@@ -581,7 +581,6 @@ class MavsdkBridgeNode : public rclcpp::Node
         */
         uint8_t try_land(std::vector<float> data)
         {    
-            //std::cout<<"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
             mavsdk::Action::Result result = action->return_to_launch();
             if (result != mavsdk::Action::Result::Success) 
             {
@@ -653,6 +652,7 @@ class MavsdkBridgeNode : public rclcpp::Node
         }
 
 
+
         /**
          * @brief Выполняет попытку взлета на заданную высоту.
          * @param data std::vector<float> - {height}
@@ -675,7 +675,6 @@ class MavsdkBridgeNode : public rclcpp::Node
                 if (z_coor<=80)
                 {
 
-                
                     while (!telemetry->health_all_ok())
                     {
                         std::cout << "Waiting for system to be ready\n";
@@ -684,8 +683,6 @@ class MavsdkBridgeNode : public rclcpp::Node
                     
                     std::cout << "System ready\n";
                     std::cout << "Creating and uploading mission\n";
-
-
 
                     // Telemetry::Position home_position;
                     // while (isnan(home_position.absolute_altitude_m) == true) 
@@ -701,6 +698,7 @@ class MavsdkBridgeNode : public rclcpp::Node
 
                     //     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
                     // }
+
                     uint16_t seq = 0;
 
                     std::vector<mavsdk::MissionRaw::MissionItem> land_raw_items;
@@ -779,7 +777,6 @@ class MavsdkBridgeNode : public rclcpp::Node
             }
 
         
-
 
         void set_home_position_to_current_position()
         {
@@ -892,4 +889,3 @@ int main(int argc, char * argv[])
 
 // Высота взлёта
 // Возврат домой
-
