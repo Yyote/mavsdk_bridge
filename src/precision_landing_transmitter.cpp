@@ -219,12 +219,18 @@ double local_to_global(double angle)
     return - angle + M_PI_2;
 }
 
+// JSON
 json telemetry_data;
 
 // Initialize ZMQ
 zmq::context_t ctx{1};
 zmq::socket_t socket{ctx, zmq::socket_type::pub};
 std::string connect = "tcp://192.168.128.174:8080"; // Set TCP address
+
+void isok(int num) 
+{
+    std::cout << "All is ok ---> " << num << "\n";
+}
 
 void error_msg (mavsdk::MavlinkPassthrough::Result result) 
 {
