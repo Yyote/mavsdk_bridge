@@ -9,9 +9,12 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(MAVSDK REQUIRED)
 find_package(privyaznik_msgs REQUIRED)
 find_package(rclcpp_action REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 
 # uncomment the following section in order to fill in
 # further dependencies manually.
@@ -19,7 +22,7 @@ find_package(rclcpp_action REQUIRED)
 
 add_executable(precision_landing_transmitter src/precision_landing_transmitter.cpp)
 target_link_libraries(precision_landing_transmitter MAVSDK::mavsdk zmq)
-ament_target_dependencies(precision_landing_transmitter rclcpp geometry_msgs privyaznik_msgs rclcpp_action)
+ament_target_dependencies(precision_landing_transmitter rclcpp geometry_msgs sensor_msgs tf2_geometry_msgs privyaznik_msgs tf2 rclcpp_action)
 
 
 add_executable(try_move src/try_move.cpp)
