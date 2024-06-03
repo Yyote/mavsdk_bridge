@@ -12,11 +12,16 @@
 #include "rclcpp_action/rclcpp_action.hpp"
 
 #include "geometry_msgs/msg/vector3.hpp"
+#include "geometry_msgs/msg/quaternion.hpp"
+#include "sensor_msgs/msg/imu.hpp"
 #include "privyaznik_msgs/msg/command.hpp"
 #include "privyaznik_msgs/srv/utm_to_wgs.hpp"
 #include "privyaznik_msgs/srv/wgs_to_utm.hpp"
 #include "privyaznik_msgs/srv/command.hpp"
 #include "privyaznik_msgs/action/command.hpp"
+#include "tf2/LinearMath/Matrix3x3.h"
+#include "tf2/LinearMath/Quaternion.h"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 
 #include <mavsdk/plugins/mission_raw/mission_raw.h>
 
@@ -38,10 +43,10 @@ using std::placeholders::_1, std::placeholders::_2;
 using std::chrono::seconds;
 using std::this_thread::sleep_for;
 
-const std::string zmq_connect_address = "tcp://127.0.0.1:8080"; // Set TCP address for ZMQ
-// const std::string zmq_connect_address = "tcp://192.168.128.174:8080"; // Set TCP address for ZMQ
-// std::string mavlink_addr = "serial:///dev/ttyUSB0:57600"; // Set | type+address+baud | to connect mavsdk to mavlink
+// const std::string zmq_connect_address = "tcp://127.0.0.1:8080"; // Set TCP address for ZMQ
 std::string mavlink_addr = "udp://:14551"; // Set | type+address+baud | to connect mavsdk to mavlink
+const std::string zmq_connect_address = "tcp://192.168.128.174:8080"; // Set TCP address for ZMQ
+// std::string mavlink_addr = "serial:///dev/ttyUSB0:115200"; // Set | type+address+baud | to connect mavsdk to mavlink
 
 mavsdk::MissionRaw::MissionItem make_mission_item_wp(
     double latitude_deg, double longitude_deg, float relative_altitude_m,
@@ -303,11 +308,15 @@ class MavsdkBridgeNode : public rclcpp::Node
         {
             cb_group = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant); 
             sub_options.callback_group = cb_group;
+            // sub_options.qos_overriding_options.
+            // sub_options.
             sub_prec_landing = this->create_subscription<geometry_msgs::msg::Vector3>("camera/landing_position", 10, std::bind(&MavsdkBridgeNode::prec_land_callback, this, _1), sub_options);
             //sub_commands = this->create_subscription<privyaznik_msgs::msg::Command>("commands", 10, std::bind(&MavsdkBridgeNode::commands_callback, this, _1), sub_options);
+            sub_imu_data = this->create_subscription<sensor_msgs::msg::Imu>("/mavros/imu/data", rclcpp::QoS(rclcpp::KeepLast(10)).best_effort().durability_volatile(), std::bind(&MavsdkBridgeNode::imu_data_callback, this, _1), sub_options);
+            
             utm_to_wgs_client = this->create_client<privyaznik_msgs::srv::UtmToWgs>("utm_to_wgs", rmw_qos_profile_default, cb_group);
             wgs_to_utm_client = this->create_client<privyaznik_msgs::srv::WgsToUtm>("wgs_to_utm", rmw_qos_profile_default, cb_group);
-            logic_timer = this->create_wall_timer(50ms, std::bind(&MavsdkBridgeNode::logic_in_timer, this), cb_group);
+            // logic_timer = this->create_wall_timer(50ms, std::bind(&MavsdkBridgeNode::logic_in_timer, this), cb_group);
             //cmd_service = this->create_service <privyaznik_msgs::srv::Command>("commands", std::bind(&MavsdkBridgeNode::commands_callback, this, _1, _2), rmw_qos_profile_default, cb_group);
 
             cmd_action_service = rclcpp_action::create_server<privyaznik_msgs::action::Command>(
@@ -355,36 +364,36 @@ class MavsdkBridgeNode : public rclcpp::Node
             // param_handle.set_param_int("LOG_DISARMED", 1);
 
             telemetry = std::make_unique<Telemetry>(system.value());
-            
+
             // We want to listen to the altitude of the drone at 1 Hz.
             telemetry->set_rate_position_async(1.0, [](Telemetry::Result set_rate_result)
             {
                 std::cerr << "Setting position rate info: " << set_rate_result << "\n\n";
             });
 
-            static bool fix_chk, repeat_satellites = false;
-            auto hand = telemetry->subscribe_gps_info([this](Telemetry::GpsInfo gps) 
-            {
-                if (old_num_satellites != gps.num_satellites && repeat_satellites == true) 
-                {
-                    old_num_satellites = gps.num_satellites;
-                }
-                else
-                {
-                    if (repeat_satellites == false) 
-                    {
-                        std::cout << "--- GPS info ---" << "\n";
-                        std::cout << "GPS fix info: " << gps.fix_type << "\n";
-                        std::cout << "GPS num of satellites: " << gps.num_satellites << "\n\n";
+            // static bool fix_chk, repeat_satellites = false;
+            // auto hand = telemetry->subscribe_gps_info([this](Telemetry::GpsInfo gps) 
+            // {
+            //     if (old_num_satellites != gps.num_satellites && repeat_satellites == true) 
+            //     {
+            //         old_num_satellites = gps.num_satellites;
+            //     }
+            //     else
+            //     {
+            //         if (repeat_satellites == false) 
+            //         {
+            //             std::cout << "--- GPS info ---" << "\n";
+            //             std::cout << "GPS fix info: " << gps.fix_type << "\n";
+            //             std::cout << "GPS num of satellites: " << gps.num_satellites << "\n\n";
 
-                        if (gps.num_satellites > 0) fix_chk = 1;
-                    }
-                }
-            });
+            //             if (gps.num_satellites > 0) fix_chk = 1;
+            //         }
+            //     }
+            // });
 
-            while (fix_chk == 0) sleep_for(seconds(3));
-            // telemetry->unsubscribe_gps_info(hand);
-            repeat_satellites = true;
+            // while (fix_chk == 0) sleep_for(seconds(3));
+            // // telemetry->unsubscribe_gps_info(hand);
+            // repeat_satellites = true;
 
             create_json();
             socket.bind(zmq_connect_address);
@@ -399,13 +408,13 @@ class MavsdkBridgeNode : public rclcpp::Node
                 current_position = position;
             });
 
-            telemetry->subscribe_attitude_euler([this](Telemetry::EulerAngle orient)
-            {
-                telemetry_data["Roll"] = orient.roll_deg;
-                telemetry_data["Pitch"] = orient.pitch_deg;
-                telemetry_data["Yaw"] = orient.yaw_deg;
-                current_orientation = orient;
-            });
+            // telemetry->subscribe_attitude_euler([this](Telemetry::EulerAngle orient)
+            // {
+            //     telemetry_data["Roll"] = orient.roll_deg;
+            //     telemetry_data["Pitch"] = orient.pitch_deg;
+            //     telemetry_data["Yaw"] = orient.yaw_deg;
+            //     current_orientation = orient;
+            // });
 
             telemetry->subscribe_heading([](Telemetry::Heading hdd)
             {
@@ -454,6 +463,7 @@ class MavsdkBridgeNode : public rclcpp::Node
 
         rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr sub_prec_landing;
         rclcpp::Subscription<privyaznik_msgs::msg::Command>::SharedPtr sub_commands;
+        rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr sub_imu_data;
 
         rclcpp::Client<privyaznik_msgs::srv::UtmToWgs>::SharedPtr utm_to_wgs_client;
         rclcpp::Client<privyaznik_msgs::srv::WgsToUtm>::SharedPtr wgs_to_utm_client;
@@ -472,23 +482,20 @@ class MavsdkBridgeNode : public rclcpp::Node
         std::shared_ptr<rclcpp::Client<privyaznik_msgs::srv::UtmToWgs>::FutureAndRequestId> utm_to_wgs_response_future;
 
 
-        rclcpp_action::GoalResponse handle_goal(
-        const rclcpp_action::GoalUUID & uuid,
-        std::shared_ptr<const privyaznik_msgs::action::Command::Goal> goal)
+        rclcpp_action::GoalResponse handle_goal(const rclcpp_action::GoalUUID & uuid, std::shared_ptr<const privyaznik_msgs::action::Command::Goal> goal)
         {
-        RCLCPP_INFO(this->get_logger(), "Received goal request with order %d", goal->cmd);
-        (void)uuid;
-    
-        return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
+            RCLCPP_INFO(this->get_logger(), "Received goal request with order %d", goal->cmd);
+            (void)uuid;
+        
+            return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
         }
 
 
-        rclcpp_action::CancelResponse handle_cancel(
-        const std::shared_ptr<rclcpp_action::ServerGoalHandle<privyaznik_msgs::action::Command>>goal_handle)
+        rclcpp_action::CancelResponse handle_cancel(const std::shared_ptr<rclcpp_action::ServerGoalHandle<privyaznik_msgs::action::Command>>goal_handle)
         {
-        RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
-        (void)goal_handle;
-        return rclcpp_action::CancelResponse::ACCEPT;
+            RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
+            (void)goal_handle;
+            return rclcpp_action::CancelResponse::ACCEPT;
         }
 
         void handle_accepted(const std::shared_ptr<rclcpp_action::ServerGoalHandle<privyaznik_msgs::action::Command>> goal_handle)
@@ -548,6 +555,22 @@ class MavsdkBridgeNode : public rclcpp::Node
             
         }
 
+        void imu_data_callback(sensor_msgs::msg::Imu::SharedPtr attitude)
+        {
+            tf2::Quaternion q_container;
+            tf2Scalar roll, pitch, yaw;
+            q_container.setX(attitude->orientation.x);
+            q_container.setY(attitude->orientation.y);
+            q_container.setZ(attitude->orientation.z);
+            q_container.setW(attitude->orientation.w);
+
+            tf2::Matrix3x3 mtrx(q_container);
+            mtrx.getRPY(roll, pitch, yaw);
+
+            telemetry_data["Roll"] = roll;
+            telemetry_data["Pitch"] = pitch;
+            telemetry_data["Yaw"] = yaw;
+        }
 
         void prec_land_callback(const geometry_msgs::msg::Vector3::SharedPtr coords) // Проблема такого колбэка в том, что const не позволяет модифицировать переменные за пределами функции
         {
@@ -855,7 +878,6 @@ class MavsdkBridgeNode : public rclcpp::Node
             std::cout << "----------------" << "\n";
         }
 
-        rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr subscription_;
         rclcpp::TimerBase::SharedPtr data_timer;
         rclcpp::TimerBase::SharedPtr info_timer;
 };
