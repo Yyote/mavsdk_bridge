@@ -413,12 +413,13 @@ class MavsdkBridgeNode : public rclcpp::Node
             //     telemetry_data["Roll"] = orient.roll_deg;
             //     telemetry_data["Pitch"] = orient.pitch_deg;
             //     telemetry_data["Yaw"] = orient.yaw_deg;
-            //     current_orientation = orient;
+            //     current_heading;
             // });
 
-            telemetry->subscribe_heading([](Telemetry::Heading hdd)
+            telemetry->subscribe_heading([this](Telemetry::Heading hdd)
             {
                 telemetry_data["Heading"] = hdd.heading_deg;
+                current_heading = hdd.heading_deg;
             });
 
         }
@@ -459,8 +460,7 @@ class MavsdkBridgeNode : public rclcpp::Node
 
         Telemetry::Position current_position;
         Telemetry::Position home_position;
-        Telemetry::EulerAngle current_orientation;
-
+        double current_heading;
         rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr sub_prec_landing;
         rclcpp::Subscription<privyaznik_msgs::msg::Command>::SharedPtr sub_commands;
         rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr sub_imu_data;
@@ -653,7 +653,7 @@ class MavsdkBridgeNode : public rclcpp::Node
             while (wgs_to_utm_response_future->wait_for(50ms) != std::future_status::ready) RCLCPP_WARN_STREAM(this->get_logger(), "Try move converting WGS to UTM. Waiting...");
             std::shared_ptr<privyaznik_msgs::srv::WgsToUtm_Response> response = wgs_to_utm_response_future->get();
 
-            double local_yaw = global_to_local(current_orientation.yaw_deg);
+            double local_yaw = global_to_local(current_heading);
 
             easting = data.at(0) * cos(local_yaw) - data.at(1) * sin(local_yaw) + response->easting;
             northing = data.at(0) * sin(local_yaw) + data.at(1) * cos(local_yaw) + response->northing;
