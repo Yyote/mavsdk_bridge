@@ -14,6 +14,7 @@
 #include "geometry_msgs/msg/vector3.hpp"
 #include "geometry_msgs/msg/quaternion.hpp"
 #include "sensor_msgs/msg/imu.hpp"
+#include "mavros_msgs/msg/gpsraw.hpp"
 #include "privyaznik_msgs/msg/command.hpp"
 #include "privyaznik_msgs/srv/utm_to_wgs.hpp"
 #include "privyaznik_msgs/srv/wgs_to_utm.hpp"
@@ -311,13 +312,15 @@ class MavsdkBridgeNode : public rclcpp::Node
             // sub_options.qos_overriding_options.
             // sub_options.
             sub_prec_landing = this->create_subscription<geometry_msgs::msg::Vector3>("camera/landing_position", 10, std::bind(&MavsdkBridgeNode::prec_land_callback, this, _1), sub_options);
-            //sub_commands = this->create_subscription<privyaznik_msgs::msg::Command>("commands", 10, std::bind(&MavsdkBridgeNode::commands_callback, this, _1), sub_options);
+            // sub_commands = this->create_subscription<privyaznik_msgs::msg::Command>("commands", 10, std::bind(&MavsdkBridgeNode::commands_callback, this, _1), sub_options);
             sub_imu_data = this->create_subscription<sensor_msgs::msg::Imu>("/mavros/imu/data", rclcpp::QoS(rclcpp::KeepLast(10)).best_effort().durability_volatile(), std::bind(&MavsdkBridgeNode::imu_data_callback, this, _1), sub_options);
-            
+            sub_gps1_data = this->create_subscription<mavros_msgs::msg::GPSRAW>("/mavros/gpsstatus/gps1/raw", rclcpp::QoS(rclcpp::KeepLast(10)).best_effort().durability_volatile(), std::bind(&MavsdkBridgeNode::gps_data1_callback, this, _1), sub_options);
+            sub_gps2_data = this->create_subscription<mavros_msgs::msg::GPSRAW>("/mavros/gpsstatus/gps2/raw", rclcpp::QoS(rclcpp::KeepLast(10)).best_effort().durability_volatile(), std::bind(&MavsdkBridgeNode::gps_data2_callback, this, _1), sub_options);
+
             utm_to_wgs_client = this->create_client<privyaznik_msgs::srv::UtmToWgs>("utm_to_wgs", rmw_qos_profile_default, cb_group);
             wgs_to_utm_client = this->create_client<privyaznik_msgs::srv::WgsToUtm>("wgs_to_utm", rmw_qos_profile_default, cb_group);
             // logic_timer = this->create_wall_timer(50ms, std::bind(&MavsdkBridgeNode::logic_in_timer, this), cb_group);
-            //cmd_service = this->create_service <privyaznik_msgs::srv::Command>("commands", std::bind(&MavsdkBridgeNode::commands_callback, this, _1, _2), rmw_qos_profile_default, cb_group);
+            // cmd_service = this->create_service <privyaznik_msgs::srv::Command>("commands", std::bind(&MavsdkBridgeNode::commands_callback, this, _1, _2), rmw_qos_profile_default, cb_group);
 
             cmd_action_service = rclcpp_action::create_server<privyaznik_msgs::action::Command>(
             this->get_node_base_interface(),
@@ -328,12 +331,15 @@ class MavsdkBridgeNode : public rclcpp::Node
             std::bind(&MavsdkBridgeNode::handle_goal, this, _1, _2),
             std::bind(&MavsdkBridgeNode::handle_cancel, this, _1),
             std::bind(&MavsdkBridgeNode::handle_accepted, this, _1));
-            //std::bind(&MavsdkBridgeNode::commands_callback, this, _1));
+            // std::bind(&MavsdkBridgeNode::commands_callback, this, _1));
 
-            //cmd_service = this->create_service<privyaznik_msgs::srv::Command>("commands", std::bind(&MavsdkBridgeNode::commands_callback, this, _1, _2), rmw_qos_profile_default, cb_group);
+            // cmd_service = this->create_service<privyaznik_msgs::srv::Command>("commands", std::bind(&MavsdkBridgeNode::commands_callback, this, _1, _2), rmw_qos_profile_default, cb_group);
             
             data_timer = this->create_wall_timer(50ms, std::bind(&MavsdkBridgeNode::data_callback, this));
             info_timer = this->create_wall_timer(750ms, std::bind(&MavsdkBridgeNode::info_output, this));
+            
+            gps1_cb_save = std::make_shared<mavros_msgs::msg::GPSRAW>();
+            gps2_cb_save = std::make_shared<mavros_msgs::msg::GPSRAW>();
 
             ConnectionResult connection_result = mavsdk.add_any_connection(mavlink_addr);
 
@@ -464,6 +470,8 @@ class MavsdkBridgeNode : public rclcpp::Node
         rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr sub_prec_landing;
         rclcpp::Subscription<privyaznik_msgs::msg::Command>::SharedPtr sub_commands;
         rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr sub_imu_data;
+        rclcpp::Subscription<mavros_msgs::msg::GPSRAW>::SharedPtr sub_gps1_data;
+        rclcpp::Subscription<mavros_msgs::msg::GPSRAW>::SharedPtr sub_gps2_data;
 
         rclcpp::Client<privyaznik_msgs::srv::UtmToWgs>::SharedPtr utm_to_wgs_client;
         rclcpp::Client<privyaznik_msgs::srv::WgsToUtm>::SharedPtr wgs_to_utm_client;
@@ -555,7 +563,7 @@ class MavsdkBridgeNode : public rclcpp::Node
             
         }
 
-        void imu_data_callback(sensor_msgs::msg::Imu::SharedPtr attitude)
+        void imu_data_callback(const sensor_msgs::msg::Imu::SharedPtr attitude)
         {
             tf2::Quaternion q_container;
             tf2Scalar roll, pitch, yaw;
@@ -570,6 +578,40 @@ class MavsdkBridgeNode : public rclcpp::Node
             telemetry_data["Roll"] = roll;
             telemetry_data["Pitch"] = pitch;
             telemetry_data["Yaw"] = yaw;
+        }
+
+        inline void gps_fix_type_info(const mavros_msgs::msg::GPSRAW::SharedPtr gps_fix, int gps_id)
+        {
+            switch (gps_fix->fix_type)
+            {
+                case mavros_msgs::msg::GPSRAW::GPS_FIX_TYPE_NO_GPS:
+                    RCLCPP_WARN_STREAM(this->get_logger(), "NO GPS_" << gps_id << "." << std::endl);
+                    break;
+                case mavros_msgs::msg::GPSRAW::GPS_FIX_TYPE_NO_FIX:
+                    RCLCPP_WARN_STREAM(this->get_logger(), "NO FIX GPS_" << gps_id << "." << std::endl);
+                    break;
+                case mavros_msgs::msg::GPSRAW::GPS_FIX_TYPE_2D_FIX:
+                    RCLCPP_INFO_STREAM(this->get_logger(), "2D FIX GPS_" << gps_id << "." << std::endl);
+                    break;
+                case mavros_msgs::msg::GPSRAW::GPS_FIX_TYPE_3D_FIX:
+                    RCLCPP_INFO_STREAM(this->get_logger(), "3D FIX GPS_" << gps_id << "." << std::endl);
+                    break;
+            }
+        }
+
+        mavros_msgs::msg::GPSRAW::SharedPtr gps1_cb_save;
+        mavros_msgs::msg::GPSRAW::SharedPtr gps2_cb_save;
+
+        void gps_data1_callback(mavros_msgs::msg::GPSRAW::SharedPtr gps1)
+        {
+            // gps_fix_type_info(gps1, 1);
+            gps1_cb_save = gps1;
+        }
+
+        void gps_data2_callback(mavros_msgs::msg::GPSRAW::SharedPtr gps2)
+        {
+            // gps_fix_type_info(gps2, 2);
+            gps2_cb_save = gps2;
         }
 
         void prec_land_callback(const geometry_msgs::msg::Vector3::SharedPtr coords) // Проблема такого колбэка в том, что const не позволяет модифицировать переменные за пределами функции
@@ -867,8 +909,9 @@ class MavsdkBridgeNode : public rclcpp::Node
 
         void info_output() 
         {
-            std::cout << "\nTIME GOES BACK ---> " << std::to_string(this->get_clock()->now().seconds()) << "\n"; 
-            std::cout << "GPS num of satellites: " << old_num_satellites << "\n\n";
+            std::cout << "\nTIME GOES BACK ---> " << std::to_string(this->get_clock()->now().seconds()) << "\n\n"; 
+            std::cout << "GPS_1 num of satellites: " << gps1_cb_save->satellites_visible << "\n"; // old_num_satellites
+            std::cout << "GPS_2 num of satellites: " << gps2_cb_save->satellites_visible << "\n\n";
 
             std::cout << "----- JSON -----" << "\n";
             for (auto& [key,value] : telemetry_data.items())
@@ -876,6 +919,9 @@ class MavsdkBridgeNode : public rclcpp::Node
                 std::cout << key << " : " << value << "\n";
             }
             std::cout << "----------------" << "\n";
+
+            gps_fix_type_info(gps1_cb_save, 1);
+            gps_fix_type_info(gps2_cb_save, 2);
         }
 
         rclcpp::TimerBase::SharedPtr data_timer;
