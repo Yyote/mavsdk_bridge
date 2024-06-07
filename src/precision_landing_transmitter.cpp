@@ -293,7 +293,9 @@ void create_json()
         {"Roll", 0},
         {"Pitch", 0},
         {"Yaw", 0},
-        {"Heading", 0}
+        {"Heading", 0},
+        {"GPSsat1", 0},
+        {"GPSsat2", 0}
     };
 }
 
@@ -901,6 +903,9 @@ class MavsdkBridgeNode : public rclcpp::Node
         void data_callback()
         {
             telemetry_data["Time"] = this->get_clock()->now().seconds();
+
+            telemetry_data["GPSsat1"] = gps1_cb_save->satellites_visible;
+            telemetry_data["GPSsat2"] = gps2_cb_save->satellites_visible;
 
             std::string serial_data = telemetry_data.dump();
             socket.send(zmq::str_buffer("Telemetry_data_topic"), zmq::send_flags::sndmore);
