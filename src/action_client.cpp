@@ -1,6 +1,11 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
+#include <cinttypes>
+#include <functional>
+#include <future>
+#include <memory>
+#include <string>
 
 #include <mavsdk/plugins/action/action.h>
 #include "rclcpp/rclcpp.hpp"
@@ -19,11 +24,6 @@
 #include <mavsdk/plugins/telemetry/telemetry.h>
 #include <mavsdk/mavlink/common/mavlink.h>
 
-#include <cinttypes>
-#include <functional>
-#include <future>
-#include <memory>
-#include <string>
 
 // TODO(jacobperron): Remove this once it is included as part of 'rclcpp.hpp'
 #include "rclcpp_action/rclcpp_action.hpp"
