@@ -432,6 +432,10 @@ class CommandActionClient : public rclcpp::Node
                 // RCLCPP_WARN_STREAM(this->get_logger(), std::to_string(427));
                 if (jmsg.at("type") == 0)
                 {
+                    if (jmsg.at("result") == true)
+                    {
+                        feedback.at("message") = "Ошибка: команда сформирована неверно. Поле result = true.";
+                    }
                     // RCLCPP_ERROR_STREAM(this->get_logger(), std::to_string(430));
                     if (jmsg.at("cmd") == 0)
                     {
@@ -848,6 +852,10 @@ class MavsdkBridgeNode : public rclcpp::Node
         */
         uint8_t try_land(std::vector<float> data)
         {    
+            if (telemetry->landed_state() == Telemetry::LandedState::OnGround)
+            {
+                return privyaznik_msgs::action::Command::Result::RES_FAILED;
+            }
             mavsdk::Action::Result result = action->return_to_launch();
             if (result != mavsdk::Action::Result::Success) 
             {
