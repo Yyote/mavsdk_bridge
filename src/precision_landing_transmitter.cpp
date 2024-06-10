@@ -1,6 +1,7 @@
 #include <iostream>
 #include <chrono>
-
+#include <cinttypes>
+#include <functional>
 #include <thread>
 
 #include <nlohmann/json.hpp>
@@ -23,6 +24,7 @@
 #include "tf2/LinearMath/Matrix3x3.h"
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
+#include "std_msgs/msg/string.hpp"
 
 #include <mavsdk/plugins/mission_raw/mission_raw.h>
 
@@ -32,6 +34,8 @@
 #include <mavsdk/plugins/action/action.h>
 #include <mavsdk/plugins/telemetry/telemetry.h>
 #include <mavsdk/mavlink/common/mavlink.h>
+
+#include "rclcpp_action/rclcpp_action.hpp"
 
 using GoalHandlePrivyaznik = rclcpp_action::ServerGoalHandle<privyaznik_msgs::action::Command>;
 using mavsdk::MavlinkPassthrough, mavsdk::Mavsdk, mavsdk::ConnectionResult, mavsdk::Param, mavsdk::Telemetry;
@@ -44,10 +48,9 @@ using std::placeholders::_1, std::placeholders::_2;
 using std::chrono::seconds;
 using std::this_thread::sleep_for;
 
-// const std::string zmq_connect_address = "tcp://127.0.0.1:8080"; // Set TCP address for ZMQ
+// const std::string zmq_connect_address = "tcp://192.168.128.174:8080"; // Set TCP address for ZMQ
+const std::string zmq_connect_address = "tcp://127.0.0.1:8080"; // Set TCP address for ZMQ
 std::string mavlink_addr = "udp://:14551"; // Set | type+address+baud | to connect mavsdk to mavlink
-const std::string zmq_connect_address = "tcp://192.168.128.174:8080"; // Set TCP address for ZMQ
-// std::string mavlink_addr = "serial:///dev/ttyUSB0:115200"; // Set | type+address+baud | to connect mavsdk to mavlink
 
 mavsdk::MissionRaw::MissionItem make_mission_item_wp(
     double latitude_deg, double longitude_deg, float relative_altitude_m,
@@ -299,6 +302,273 @@ void create_json()
     };
 }
 
+
+
+
+
+class CommandActionClient : public rclcpp::Node
+{
+    public:
+        using Command = privyaznik_msgs::action::Command;
+        using GoalHandleCommand = rclcpp_action::ClientGoalHandle<Command>;
+
+        explicit CommandActionClient(const rclcpp::NodeOptions & node_options = rclcpp::NodeOptions())
+        : Node("command_action_client", node_options), goal_done_(false)
+        {
+            cb_group = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant); 
+            sub_options.callback_group = cb_group;
+            cmd_string_sub = this->create_subscription<std_msgs::msg::String>("npu/commands", rclcpp::QoS(rclcpp::KeepLast(10)).best_effort().durability_volatile(), std::bind(&CommandActionClient::commands_from_npu_callback, this, _1), sub_options);
+            cmd_string_pub = this->create_publisher<std_msgs::msg::String>("npu/copter_feedback", 10);
+            this->client_ptr_ = rclcpp_action::create_client<Command>(
+            this->get_node_base_interface(),
+            this->get_node_graph_interface(),
+            this->get_node_logging_interface(),
+            this->get_node_waitables_interface(),
+            "command_action");
+        }
+
+        bool is_goal_done() const
+        {
+            return this->goal_done_;
+        }
+
+        void send_goal(Command::Goal &goal_msg)
+        {
+            using namespace std::placeholders;
+
+            // this->timer_->cancel();
+
+            RCLCPP_INFO_STREAM(this->get_logger(), "339");
+
+            this->goal_done_ = false;
+
+            json feedback = {
+                {"type", 1},
+                {"cmd", 0},
+                {"height", 0},
+                {"result", false},
+                {"message", ""}
+            };
+
+            RCLCPP_INFO_STREAM(this->get_logger(), "351");
+
+            if (!this->client_ptr_) {
+                feedback.at("message") = "Ошибка: сервер дрона не запущен.";
+            }
+            if (!this->client_ptr_->wait_for_action_server(std::chrono::seconds(10))) {
+                feedback.at("message") = "Ошибка: сервер дрона не отвечает.";
+                this->goal_done_ = true;
+            }
+
+            // if (feedback.at("message") != "")
+            // {
+                std_msgs::msg::String msg;
+                msg.data = feedback.dump();
+                this->cmd_string_pub->publish(msg);
+                RCLCPP_INFO_STREAM(this->get_logger(), "366");
+                // return;
+            // }
+
+            RCLCPP_INFO_STREAM(this->get_logger(), "Sending goal");
+
+
+            auto send_goal_options = rclcpp_action::Client<Command>::SendGoalOptions();
+            send_goal_options.goal_response_callback =
+            std::bind(&CommandActionClient::goal_response_callback, this, _1);
+            send_goal_options.feedback_callback =
+            std::bind(&CommandActionClient::feedback_callback, this, _1, _2);
+            send_goal_options.result_callback =
+            std::bind(&CommandActionClient::result_callback, this, _1);
+            auto goal_handle_future = this->client_ptr_->async_send_goal(goal_msg, send_goal_options);
+        }
+
+    private:
+        rclcpp_action::Client<Command>::SharedPtr client_ptr_;
+        // rclcpp::TimerBase::SharedPtr timer_;
+        rclcpp::Subscription<std_msgs::msg::String>::SharedPtr cmd_string_sub;
+        rclcpp::Publisher<std_msgs::msg::String>::SharedPtr cmd_string_pub;
+        bool goal_done_;
+        rclcpp::CallbackGroup::SharedPtr cb_group;
+        rclcpp::SubscriptionOptions sub_options;
+
+        void goal_response_callback(GoalHandleCommand::SharedPtr goal_handle)
+        {
+            json feedback = {
+                {"type", 1},
+                {"cmd", 0},
+                {"height", 0},
+                {"result", false},
+                {"message", ""}
+            };
+            if (!goal_handle) {
+            // RCLCPP_ERROR(this->get_logger(), "Goal was rejected by server");
+            feedback["message"] = "Задача отклонена.";
+            } else {
+            // RCLCPP_INFO_STREAM(this->get_logger(), "Goal accepted by server, waiting for result");
+            feedback["message"] = "Задача принята на выполнение. Ожидайте результата.";
+            feedback["result"] = true;
+            }
+            std_msgs::msg::String msg;
+            msg.data = feedback.dump();
+            cmd_string_pub->publish(msg);
+        }
+
+
+        void commands_from_npu_callback(std_msgs::msg::String msg)
+        {
+            // json jmsg = json::get_to(msg.data);
+            json jmsg;
+            jmsg = json::parse(msg.data);
+            // RCLCPP_ERROR_STREAM(this->get_logger(), jmsg.dump());
+            json feedback = {
+                {"type", 1},
+                {"cmd", 0},
+                {"height", 0},
+                {"result", false},
+                {"message", ""},
+            };
+            // RCLCPP_INFO_STREAM(this->get_logger(), std::to_string(423));
+            Command::Goal goal_msg;
+            try
+            {
+                // RCLCPP_WARN_STREAM(this->get_logger(), std::to_string(427));
+                if (jmsg.at("type") == 0)
+                {
+                    if (jmsg.at("result") == true)
+                    {
+                        feedback.at("message") = "Ошибка: команда сформирована неверно. Поле result = true.";
+                    }
+                    // RCLCPP_ERROR_STREAM(this->get_logger(), std::to_string(430));
+                    if (jmsg.at("cmd") == 0)
+                    {
+                        goal_msg.cmd = goal_msg.CMD_TAKEOFF;
+                        // RCLCPP_INFO_STREAM(this->get_logger(), std::to_string(434));
+                        try 
+                        {
+                            if (jmsg.at("height") > 0)
+                            {
+                                // RCLCPP_WARN_STREAM(this->get_logger(), std::to_string(439));
+                                goal_msg.data.push_back(jmsg.at("height"));
+                            }
+                            else
+                            {
+                                // RCLCPP_ERROR_STREAM(this->get_logger(), std::to_string(444));
+                                feedback.at("message") = "Ошибка: Заданная высота слишком мала. Заданное значение[метров]: " + std::to_string(float(jmsg.at("height")));
+                            }
+                        }
+                        catch (std::exception &e)
+                        {
+                            // RCLCPP_INFO_STREAM(this->get_logger(), std::to_string(450));
+                            feedback.at("message") = "Ошибка: Поле высоты не было задано.";
+                        }
+                    }
+                    else if (jmsg.at("cmd") == 1) 
+                    {
+                        // RCLCPP_WARN_STREAM(this->get_logger(), std::to_string(456));
+                        goal_msg.cmd = goal_msg.CMD_LAND;
+                    }
+                    else
+                    {
+                        // RCLCPP_ERROR_STREAM(this->get_logger(), std::to_string(461));
+                        feedback.at("message") = "Ошибка: Тип команды задан неверно.";
+                    }
+                }
+                else
+                {
+                    // RCLCPP_INFO_STREAM(this->get_logger(), std::to_string(467));
+                    feedback.at("message") = "Ошибка: Получен результат вместо команды.";
+                }
+            }
+            catch (std::exception &e)
+            {
+                // RCLCPP_WARN_STREAM(this->get_logger(), std::to_string(473));
+                feedback.at("message") = "Ошибка: сообщение сформировано неверно.";
+            }
+
+            if (feedback.at("message") == "")
+            {
+                // RCLCPP_ERROR_STREAM(this->get_logger(), std::to_string(479));
+                send_goal(goal_msg);
+            }
+            else
+            {
+                std_msgs::msg::String feedback_msg;
+                feedback_msg.data = feedback.dump();
+                cmd_string_pub->publish(feedback_msg);
+                // RCLCPP_INFO_STREAM(this->get_logger(), std::to_string(484));
+            }
+            // RCLCPP_WARN_STREAM(this->get_logger(), std::to_string(489));
+        }
+
+
+        void feedback_callback(
+            GoalHandleCommand::SharedPtr,
+            const std::shared_ptr<const Command::Feedback> feedback)
+        {
+            feedback->message.back();
+        }
+
+        void result_callback(const GoalHandleCommand::WrappedResult & result)
+        {
+            json feedback = {
+                {"type", 1},
+                {"cmd", 0},
+                {"height", 0},
+                {"result", false},
+                {"message", ""}
+            };
+
+            this->goal_done_ = true;
+            std_msgs::msg::String msg;
+
+            if (result.result->result == privyaznik_msgs::action::Command::Result::RES_FAILED)
+            {
+                    feedback["message"] = "Задача была прервана.";
+                    msg.data = feedback.dump();
+                    cmd_string_pub->publish(msg);
+                    return;
+            }
+            else if (result.result->result == privyaznik_msgs::action::Command::Result::RES_SUCCESS)
+            {
+                    feedback["message"] = "Задача выполнена успешно.";
+                    feedback["result"] = true;
+                    msg.data = feedback.dump();
+                    cmd_string_pub->publish(msg);
+                    return;
+            }
+            // switch (result.code) {
+            //     case rclcpp_action::ResultCode::SUCCEEDED:
+            //         feedback["message"] = "Задача выполнена успешно.";
+            //         feedback["result"] = true;
+            //         break;
+            //     case rclcpp_action::ResultCode::ABORTED:
+            //         feedback["message"] = "Задача была прервана.";
+            //         msg.data = feedback.dump();
+            //         cmd_string_pub->publish(msg);
+            //         return;
+            //     case rclcpp_action::ResultCode::CANCELED:
+            //         feedback["message"] = "Задача была отменена.";
+            //         msg.data = feedback.dump();
+            //         cmd_string_pub->publish(msg);
+            //         return;
+            //     default:
+            //         feedback["message"] = "Ошибка: неизвестный результат выполнения.";
+            //         msg.data = feedback.dump();
+            //         cmd_string_pub->publish(msg);
+            //         return;
+            // }
+
+            // RCLCPP_INFO_STREAM(this->get_logger(), "Result received");
+            auto res = result.result->result;
+            RCLCPP_INFO_STREAM(this->get_logger(), PRId32 << res);
+            feedback["message"] = "Результат получен: " + res;
+            msg.data = feedback.dump();
+            cmd_string_pub->publish(msg);
+        }
+};
+
+
+
 class MavsdkBridgeNode : public rclcpp::Node
 {
     
@@ -364,12 +634,6 @@ class MavsdkBridgeNode : public rclcpp::Node
             mavlink_passthrough = std::make_unique<MavlinkPassthrough>(system.value());
 
             auto param_handle = Param{*system};
-            // param_handle.set_param_float("PLND_ENABLED", 1);
-            // param_handle.set_param_int("PLND_TYPE", 1);
-            // param_handle.set_param_int("PLND_EST_TYPE", 0);
-            // param_handle.set_param_int("LAND_SPEED", 20);
-            // param_handle.set_param_int("PLND_STRICT", 0);
-            // param_handle.set_param_int("LOG_DISARMED", 1);
 
             telemetry = std::make_unique<Telemetry>(system.value());
 
@@ -378,30 +642,6 @@ class MavsdkBridgeNode : public rclcpp::Node
             {
                 std::cerr << "Setting position rate info: " << set_rate_result << "\n\n";
             });
-
-            // static bool fix_chk, repeat_satellites = false;
-            // auto hand = telemetry->subscribe_gps_info([this](Telemetry::GpsInfo gps) 
-            // {
-            //     if (old_num_satellites != gps.num_satellites && repeat_satellites == true) 
-            //     {
-            //         old_num_satellites = gps.num_satellites;
-            //     }
-            //     else
-            //     {
-            //         if (repeat_satellites == false) 
-            //         {
-            //             std::cout << "--- GPS info ---" << "\n";
-            //             std::cout << "GPS fix info: " << gps.fix_type << "\n";
-            //             std::cout << "GPS num of satellites: " << gps.num_satellites << "\n\n";
-
-            //             if (gps.num_satellites > 0) fix_chk = 1;
-            //         }
-            //     }
-            // });
-
-            // while (fix_chk == 0) sleep_for(seconds(3));
-            // // telemetry->unsubscribe_gps_info(hand);
-            // repeat_satellites = true;
 
             create_json();
             socket.bind(zmq_connect_address);
@@ -416,29 +656,16 @@ class MavsdkBridgeNode : public rclcpp::Node
                 current_position = position;
             });
 
-            // telemetry->subscribe_attitude_euler([this](Telemetry::EulerAngle orient)
-            // {
-            //     telemetry_data["Roll"] = orient.roll_deg;
-            //     telemetry_data["Pitch"] = orient.pitch_deg;
-            //     telemetry_data["Yaw"] = orient.yaw_deg;
-            //     current_heading;
-            // });
-
             telemetry->subscribe_heading([this](Telemetry::Heading hdd)
             {
                 telemetry_data["Heading"] = hdd.heading_deg;
                 current_heading = hdd.heading_deg;
             });
-
         }
 
 
         void wgs_to_utm(privyaznik_msgs::srv::WgsToUtm::Request request)
         {
-            // auto request = std::make_shared<privyaznik_msgs::srv::WgsToUtm::Request>();
-            // privyaznik_msgs::srv::WgsToUtm::Request req = request;
-            // privyaznik_msgs::srv::WgsToUtm::Response wgs_to_utm_response_future;
-
             wgs_to_utm_response_future = std::make_shared<rclcpp::Client<privyaznik_msgs::srv::WgsToUtm>::FutureAndRequestId>(this->wgs_to_utm_client->async_send_request(std::make_shared<privyaznik_msgs::srv::WgsToUtm::Request>(request)));
         }
 
@@ -448,7 +675,6 @@ class MavsdkBridgeNode : public rclcpp::Node
         {
             utm_to_wgs_response_future = std::make_shared<rclcpp::Client<privyaznik_msgs::srv::UtmToWgs>::FutureAndRequestId>(this->utm_to_wgs_client->async_send_request(std::make_shared<privyaznik_msgs::srv::UtmToWgs::Request>(request)));
         }
-
 
 
         Telemetry::Position get_curr_position()
@@ -469,6 +695,7 @@ class MavsdkBridgeNode : public rclcpp::Node
         Telemetry::Position current_position;
         Telemetry::Position home_position;
         double current_heading;
+
         rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr sub_prec_landing;
         rclcpp::Subscription<privyaznik_msgs::msg::Command>::SharedPtr sub_commands;
         rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr sub_imu_data;
@@ -494,7 +721,7 @@ class MavsdkBridgeNode : public rclcpp::Node
 
         rclcpp_action::GoalResponse handle_goal(const rclcpp_action::GoalUUID & uuid, std::shared_ptr<const privyaznik_msgs::action::Command::Goal> goal)
         {
-            RCLCPP_INFO(this->get_logger(), "Received goal request with order %d", goal->cmd);
+            RCLCPP_INFO_STREAM(this->get_logger(), "Received goal request with order " << goal->cmd);
             (void)uuid;
         
             return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
@@ -503,7 +730,7 @@ class MavsdkBridgeNode : public rclcpp::Node
 
         rclcpp_action::CancelResponse handle_cancel(const std::shared_ptr<rclcpp_action::ServerGoalHandle<privyaznik_msgs::action::Command>>goal_handle)
         {
-            RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
+            RCLCPP_INFO_STREAM(this->get_logger(), "Received request to cancel goal");
             (void)goal_handle;
             return rclcpp_action::CancelResponse::ACCEPT;
         }
@@ -515,29 +742,6 @@ class MavsdkBridgeNode : public rclcpp::Node
             std::thread{std::bind(&MavsdkBridgeNode::commands_callback, this, _1), goal_handle}.detach();
         }
 
-
-        void logic_in_timer()
-        {
-            // if (wgs_to_utm_response_future and wgs_to_utm_response_future->wait_for(std::chrono::milliseconds(50)) == std::future_status::ready)
-            // {
-            //     privyaznik_msgs::srv::WgsToUtm::Response resp = *wgs_to_utm_response_future->get();
-            //     RCLCPP_INFO_STREAM(this->get_logger(), "Test wgs to utm: " << resp.northing);
-            //     wgs_to_utm_response_future = nullptr;
-            //     privyaznik_msgs::srv::UtmToWgs::Request req;
-            //     req.easting = resp.easting;
-            //     // req.northern = false;
-            //     req.northing = resp.northing;
-            //     req.zone_letter = resp.zone_letter;
-            //     req.zone_number = resp.zone_number;
-            //     utm_to_wgs(req);
-            // }
-            // if (utm_to_wgs_response_future and utm_to_wgs_response_future->wait_for(std::chrono::milliseconds(50)) == std::future_status::ready)
-            // {
-            //     privyaznik_msgs::srv::UtmToWgs::Response resp = *utm_to_wgs_response_future->get();
-            //     RCLCPP_INFO_STREAM(this->get_logger(), "Test utm to wgs: " << resp.longitude);
-            //     utm_to_wgs_response_future = nullptr;
-            // }
-        }
 
         void commands_callback(const std::shared_ptr<GoalHandlePrivyaznik> goal_handle)
         {
@@ -650,6 +854,10 @@ class MavsdkBridgeNode : public rclcpp::Node
         */
         uint8_t try_land(std::vector<float> data)
         {    
+            if (telemetry->landed_state() == Telemetry::LandedState::OnGround)
+            {
+                return privyaznik_msgs::action::Command::Result::RES_FAILED;
+            }
             mavsdk::Action::Result result = action->return_to_launch();
             if (result != mavsdk::Action::Result::Success) 
             {
@@ -730,6 +938,7 @@ class MavsdkBridgeNode : public rclcpp::Node
         {   
             if (telemetry->landed_state() != Telemetry::LandedState::OnGround)
             {   
+                // this->action
                 return privyaznik_msgs::action::Command::Result::RES_FAILED;
             }
 
@@ -943,10 +1152,12 @@ int main(int argc, char * argv[])
     // rclcpp::shutdown();
 
     rclcpp::executors::MultiThreadedExecutor mt_exec;
-    auto node = std::make_shared<MavsdkBridgeNode>();
+    auto mavsdk_node = std::make_shared<MavsdkBridgeNode>();
+    auto cmd_client = std::make_shared<CommandActionClient>();
     
 
-    mt_exec.add_node(node);
+    mt_exec.add_node(mavsdk_node);
+    mt_exec.add_node(cmd_client);
     mt_exec.spin();
 
     return 0;
