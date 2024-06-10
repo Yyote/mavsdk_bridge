@@ -36,7 +36,7 @@ class JsonCmdClient : public rclcpp::Node
             {
                 {"type", 0},
                 {"cmd", 0},
-                {"height", 50.0},
+                {"height", -50.0},
                 {"result", false},
                 {"message", ""}
             };
