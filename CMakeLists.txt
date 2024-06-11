@@ -51,14 +51,19 @@ target_link_libraries(client_commands_land MAVSDK::mavsdk)
 ament_target_dependencies(client_commands_land rclcpp geometry_msgs rclcpp privyaznik_msgs)
 
 
-add_executable(action_client src/action_client.cpp)
-target_link_libraries(action_client MAVSDK::mavsdk)
-ament_target_dependencies(action_client rclcpp geometry_msgs rclcpp privyaznik_msgs rclcpp_action)
+add_executable(action_client_takeoff src/action_client_takeoff.cpp)
+target_link_libraries(action_client_takeoff MAVSDK::mavsdk)
+ament_target_dependencies(action_client_takeoff rclcpp geometry_msgs rclcpp privyaznik_msgs rclcpp_action)
 
 
 add_executable(action_client_land src/action_client_land.cpp)
 target_link_libraries(action_client_land MAVSDK::mavsdk)
 ament_target_dependencies(action_client_land rclcpp geometry_msgs rclcpp privyaznik_msgs rclcpp_action)
+
+
+add_executable(action_client_move src/action_client_move.cpp)
+target_link_libraries(action_client_move MAVSDK::mavsdk)
+ament_target_dependencies(action_client_move rclcpp geometry_msgs rclcpp privyaznik_msgs rclcpp_action)
 
 
 add_executable(action_service src/action_service.cpp)
@@ -85,9 +90,10 @@ install(TARGETS
   try_takeoff
   client_commands_land
   client_commands_takeoff
-  action_client
+  action_client_takeoff
   action_service
   action_client_land
+  action_client_move
   DESTINATION lib/${PROJECT_NAME}
 )
 

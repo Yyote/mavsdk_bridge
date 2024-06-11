@@ -45,9 +45,11 @@ using std::chrono::seconds;
 using std::this_thread::sleep_for;
 
 // const std::string zmq_connect_address = "tcp://127.0.0.1:8080"; // Set TCP address for ZMQ
-std::string mavlink_addr = "udp://:14551"; // Set | type+address+baud | to connect mavsdk to mavlink
-const std::string zmq_connect_address = "tcp://192.168.128.174:8080"; // Set TCP address for ZMQ
+std::string mavlink_addr = "udp://:14550"; // Set | type+address+baud | to connect mavsdk to mavlink
+//const std::string zmq_connect_address = "tcp://192.168.128.174:8080"; // Set TCP address for ZMQ
 // std::string mavlink_addr = "serial:///dev/ttyUSB0:115200"; // Set | type+address+baud | to connect mavsdk to mavlink
+const std::string zmq_connect_address = "tcp://192.168.128.127:8080";
+
 
 mavsdk::MissionRaw::MissionItem make_mission_item_wp(
     double latitude_deg, double longitude_deg, float relative_altitude_m,
@@ -675,13 +677,15 @@ class MavsdkBridgeNode : public rclcpp::Node
          * @brief Выполняет попытку подвинуться на заданные смещение и вращение (по рысканию) относительно позиции, в которой получил команду
          * @param data std::vector<float> - {x, y, z, yaw}
         */
-        void try_move(std::vector<float> data)
+        uint8_t try_move(std::vector<float> data)
         {
-            float altitude, yaw, start_yaw;
+            float altitude, yaw, start_yaw, res;
             double easting, northing;
             // easting = data[0]; 
             // northing = data[1]; 
             // altitude = data[2];
+            //yaw = data[3];
+
 
             privyaznik_msgs::srv::WgsToUtm::Request req;
             req.abs_altitude = current_position.absolute_altitude_m;
@@ -695,14 +699,37 @@ class MavsdkBridgeNode : public rclcpp::Node
             while (wgs_to_utm_response_future->wait_for(50ms) != std::future_status::ready) RCLCPP_WARN_STREAM(this->get_logger(), "Try move converting WGS to UTM. Waiting...");
             std::shared_ptr<privyaznik_msgs::srv::WgsToUtm_Response> response = wgs_to_utm_response_future->get();
 
-            double local_yaw = global_to_local(current_heading);
+// double local_yaw = global_to_local(current_heading);
+// easting = data.at(0) * cos(local_yaw) - data.at(1) * sin(local_yaw) + response->easting;
+// northing = data.at(0) * sin(local_yaw) + data.at(1) * cos(local_yaw) + response->northing;
+// altitude = data.at(2) + current_position.absolute_altitude_m; 
+// yaw = local_to_global(normalize_angle(data.at(3) + local_yaw));
+            
 
-            easting = data.at(0) * cos(local_yaw) - data.at(1) * sin(local_yaw) + response->easting;
-            northing = data.at(0) * sin(local_yaw) + data.at(1) * cos(local_yaw) + response->northing;
-            altitude = data.at(2) + current_position.absolute_altitude_m; 
+            start_yaw = data[3];
+            yaw = start_yaw * (180/M_PI);
+
+            yaw = (yaw-int(yaw)) + ( int(yaw) % 360 );
+
+            if (fabs(yaw + current_heading) <= 180 )
+            {
+                res = yaw;
+            }
             
-            yaw = local_to_global(normalize_angle(data.at(3) + local_yaw));
+
+            else
+            {
+                if (yaw > 0)
+                {
+                    res = yaw - 360;
+                }
+                else
+                {
+                    res = yaw + 360;
+                }
             
+            }
+
             privyaznik_msgs::srv::UtmToWgs::Request u_req;
             u_req.easting = easting;
             u_req.northing = northing;
@@ -713,9 +740,10 @@ class MavsdkBridgeNode : public rclcpp::Node
             while (utm_to_wgs_response_future->wait_for(50ms) != std::future_status::ready) RCLCPP_WARN_STREAM(this->get_logger(), "Try move converting UTM to WGS. Waiting...");
             std::shared_ptr<privyaznik_msgs::srv::UtmToWgs_Response> goal = utm_to_wgs_response_future->get();
 
-            mavsdk::Action::Result result = action->goto_location(goal->latitude, goal->longitude, altitude, yaw);
+            mavsdk::Action::Result result = action->goto_location(goal->latitude, goal->longitude, altitude, res);
             if (result != mavsdk::Action::Result::Success) RCLCPP_ERROR_STREAM(this->get_logger(), "Move failed");
-            return;
+            
+            return privyaznik_msgs::action::Command::Result::RES_SUCCESS;
         }
 
 
