@@ -555,7 +555,7 @@ class MavsdkBridgeNode : public rclcpp::Node
                     res->result = try_takeoff(data);
                     break;
                 case privyaznik_msgs::action::Command::Goal::CMD_MOVE:
-                    // try_move(data);
+                    res->result = try_move(data);
                     break;
                 default:
                     RCLCPP_ERROR_STREAM(this->get_logger(), "mavsdk_bridge: unknown command.");
@@ -681,10 +681,10 @@ class MavsdkBridgeNode : public rclcpp::Node
         {
             float altitude, yaw, start_yaw, res;
             double easting, northing;
-            // easting = data[0]; 
-            // northing = data[1]; 
-            // altitude = data[2];
-            //yaw = data[3];
+            easting = data[0]; 
+            northing = data[1]; 
+            altitude = data[2];
+            yaw = data[3];
 
 
             privyaznik_msgs::srv::WgsToUtm::Request req;
@@ -702,24 +702,22 @@ class MavsdkBridgeNode : public rclcpp::Node
 // double local_yaw = global_to_local(current_heading);
 // easting = data.at(0) * cos(local_yaw) - data.at(1) * sin(local_yaw) + response->easting;
 // northing = data.at(0) * sin(local_yaw) + data.at(1) * cos(local_yaw) + response->northing;
-// altitude = data.at(2) + current_position.absolute_altitude_m; 
+            altitude = data.at(2) + current_position.absolute_altitude_m; 
 // yaw = local_to_global(normalize_angle(data.at(3) + local_yaw));
             
 
-            start_yaw = data[3];
-            yaw = start_yaw * (180/M_PI);
+            start_yaw = data[3]; // Установка начальной ориентации
+            yaw = start_yaw * (180/M_PI) + current_heading; // Перевод в градусы
 
-            yaw = (yaw-int(yaw)) + ( int(yaw) % 360 );
+            yaw = (yaw-int(yaw)) + ( int(yaw) % 360 ); // Нормализация в пределах от -360 до 360
 
-            if (fabs(yaw + current_heading) <= 180 )
+            if (fabs(yaw + current_heading) <= 180 ) // Если модуль итоговой ориентации меньше 180
             {
                 res = yaw;
             }
-            
-
             else
             {
-                if (yaw > 0)
+                if (yaw > 0) 
                 {
                     res = yaw - 360;
                 }
@@ -729,10 +727,14 @@ class MavsdkBridgeNode : public rclcpp::Node
                 }
             
             }
+            
+            RCLCPP_INFO_STREAM(this->get_logger(), "Goal: " << res);
+            // res = (res + current_heading) * M_PI / 180 ;
+            // res = (res + current_heading);
 
             privyaznik_msgs::srv::UtmToWgs::Request u_req;
-            u_req.easting = easting;
-            u_req.northing = northing;
+            u_req.easting = easting + response->easting;
+            u_req.northing = northing + response->northing;
             u_req.zone_letter = response->zone_letter;
             u_req.zone_number = response->zone_number;
             utm_to_wgs(u_req);
@@ -741,8 +743,11 @@ class MavsdkBridgeNode : public rclcpp::Node
             std::shared_ptr<privyaznik_msgs::srv::UtmToWgs_Response> goal = utm_to_wgs_response_future->get();
 
             mavsdk::Action::Result result = action->goto_location(goal->latitude, goal->longitude, altitude, res);
-            if (result != mavsdk::Action::Result::Success) RCLCPP_ERROR_STREAM(this->get_logger(), "Move failed");
-            
+            if (result != mavsdk::Action::Result::Success) 
+            {
+                RCLCPP_ERROR_STREAM(this->get_logger(), "Move failed");
+                return privyaznik_msgs::action::Command::Result::RES_FAILED;
+            }
             return privyaznik_msgs::action::Command::Result::RES_SUCCESS;
         }
 

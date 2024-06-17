@@ -130,7 +130,7 @@ private:
 
     RCLCPP_INFO(this->get_logger(), "Result received");
     auto res = result.result->result;
-    RCLCPP_INFO(this->get_logger(), "%" PRId32, res);
+    RCLCPP_INFO_STREAM(this->get_logger(), std::to_string(result.result->result));
     
   }
 };  // class MinimalActionClient
