@@ -9,6 +9,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(mavros_msgs REQUIRED)
 find_package(MAVSDK REQUIRED)
@@ -23,8 +24,11 @@ find_package(tf2_geometry_msgs REQUIRED)
 
 add_executable(precision_landing_transmitter src/precision_landing_transmitter.cpp)
 target_link_libraries(precision_landing_transmitter MAVSDK::mavsdk zmq)
-ament_target_dependencies(precision_landing_transmitter rclcpp geometry_msgs sensor_msgs tf2_geometry_msgs mavros_msgs privyaznik_msgs tf2 rclcpp_action)
+ament_target_dependencies(precision_landing_transmitter rclcpp geometry_msgs std_msgs sensor_msgs tf2_geometry_msgs mavros_msgs privyaznik_msgs tf2 rclcpp_action)
 
+add_executable(json_cmd_client src/json_cmd_client.cpp)
+target_link_libraries(json_cmd_client MAVSDK::mavsdk zmq)
+ament_target_dependencies(json_cmd_client rclcpp geometry_msgs std_msgs sensor_msgs tf2_geometry_msgs mavros_msgs privyaznik_msgs tf2 rclcpp_action)
 
 add_executable(try_move src/try_move.cpp)
 target_link_libraries(try_move MAVSDK::mavsdk)
@@ -85,6 +89,7 @@ endif()
 
 install(TARGETS
   precision_landing_transmitter
+  json_cmd_client
   try_move
   try_land
   try_takeoff

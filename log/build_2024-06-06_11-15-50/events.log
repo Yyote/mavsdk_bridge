@@ -1,0 +1,392 @@
+[0.000000] (-) TimerEvent: {}
+[0.000198] (mavsdk_bridge) JobQueued: {'identifier': 'mavsdk_bridge', 'dependencies': OrderedDict()}
+[0.000248] (mavsdk_bridge) JobStarted: {'identifier': 'mavsdk_bridge'}
+[0.009559] (mavsdk_bridge) JobProgress: {'identifier': 'mavsdk_bridge', 'progress': 'cmake'}
+[0.009886] (mavsdk_bridge) Command: {'cmd': ['/usr/bin/cmake', '/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge', '-DCMAKE_INSTALL_PREFIX=/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge'], 'cwd': '/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/build/mavsdk_bridge', 'env': OrderedDict([('GZ_SIM_SYSTEM_PLUGIN_PATH', '/home/leev/gz_ws/src/ardupilot_gazebo/build:'), ('LESSOPEN', '| /usr/bin/lesspipe %s'), ('GZ_SIM_RESOURCE_PATH', '/home/leev/workspaces/privyaznik_ws/src/ardupilot_custom_launches/worlds:/home/leev/workspaces/privyaznik_ws/src/ardupilot_custom_launches/model:/home/leev/gz_ws/src/ardupilot_gazebo/models:/home/leev/gz_ws/src/ardupilot_gazebo/worlds:'), ('USER', 'leev'), ('LC_TIME', 'ru_RU.UTF-8'), ('XDG_SESSION_TYPE', 'x11'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/home/leev/workspaces/privyaznik_ws/install/privyaznik_msgs/lib:/home/leev/workspaces/wheeltec_robot_ros2/install/turn_on_wheeltec_robot/lib:/home/leev/workspaces/wheeltec_robot_ros2/install/serial/lib:/home/leev/workspaces/wheeltec_robot_ros2/install/ls01/lib:/home/leev/workspaces/wheeltec_robot_ros2/install/camera_models/lib:/home/leev/workspaces/wheeltec_robot_ros2/install/astra_camera_msgs/lib:/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/home/leev'), ('OLDPWD', '/home/leev/workspaces/privyaznik_ws'), ('DESKTOP_SESSION', 'ubuntu'), ('ROS_PYTHON_VERSION', '3'), ('GNOME_SHELL_SESSION_MODE', 'ubuntu'), ('GTK_MODULES', 'gail:atk-bridge'), ('LC_MONETARY', 'ru_RU.UTF-8'), ('MANAGERPID', '1881'), ('SYSTEMD_EXEC_PID', '2601'), ('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/run/user/1000/bus'), ('COLORTERM', 'truecolor'), ('TERMINATOR_DBUS_NAME', 'net.tenshu.Terminator23558193cd9818af7fe4d2c2f5bd9d00f'), ('GIO_LAUNCHED_DESKTOP_FILE_PID', '8387'), ('COLCON_PREFIX_PATH', '/home/leev/workspaces/json_test/install:/home/leev/workspaces/wheeltec_robot_ros2/install:/home/leev/workspaces/privyaznik_ws/install'), ('ROS_DISTRO', 'humble'), ('GTK_IM_MODULE', 'ibus'), ('LOGNAME', 'leev'), ('JOURNAL_STREAM', '8:43503'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('XDG_SESSION_CLASS', 'user'), ('USERNAME', 'leev'), ('TERM', 'xterm-256color'), ('GNOME_DESKTOP_SESSION_ID', 'this-is-deprecated'), ('ROS_LOCALHOST_ONLY', '0'), ('WINDOWPATH', '2'), ('PATH', '/home/leev/workspaces/wheeltec_robot_ros2/install/turn_on_wheeltec_robot/bin:/home/leev/workspaces/wheeltec_robot_ros2/install/global_fusion/bin:/home/leev/workspaces/wheeltec_robot_ros2/install/camera_models/bin:/opt/ros/humble/bin:/usr/lib/ccache:/home/leev/ardupilot/Tools/autotest:/opt/gcc-arm-none-eabi-10-2020-q4-major/bin:/home/leev/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin'), ('SESSION_MANAGER', 'local/leev-IdeaPad-Gaming-3-15ARH7:@/tmp/.ICE-unix/2295,unix/leev-IdeaPad-Gaming-3-15ARH7:/tmp/.ICE-unix/2295'), ('INVOCATION_ID', '52ae06d720704034a1395adbc665b435'), ('XDG_MENU_PREFIX', 'gnome-'), ('LC_ADDRESS', 'ru_RU.UTF-8'), ('XDG_RUNTIME_DIR', '/run/user/1000'), ('DISPLAY', ':1'), ('TERMINATOR_DBUS_PATH', '/net/tenshu/Terminator2'), ('LANG', 'en_US.UTF-8'), ('XDG_CURRENT_DESKTOP', 'ubuntu:GNOME'), ('IBUS_DISABLE_SNOOPER', '1'), ('LC_TELEPHONE', 'ru_RU.UTF-8'), ('XMODIFIERS', '@im=ibus'), ('XDG_SESSION_DESKTOP', 'ubuntu'), ('XAUTHORITY', '/run/user/1000/gdm/Xauthority'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('SSH_AGENT_LAUNCHER', 'gnome-keyring'), ('SSH_AUTH_SOCK', '/run/user/1000/keyring/ssh'), ('ROS_DOMAIN_ID', '207'), ('AMENT_PREFIX_PATH', '/home/leev/workspaces/privyaznik_ws/install/mavsdk_bridge:/home/leev/workspaces/privyaznik_ws/install/privyaznik_msgs:/home/leev/workspaces/privyaznik_ws/install/coordinate_conversion_py:/home/leev/workspaces/privyaznik_ws/install/aruco_precision_landing_ardupilot:/home/leev/workspaces/privyaznik_ws/install/ardupilot_custom_launches:/home/leev/workspaces/json_test/install/json_tests:/home/leev/workspaces/wheeltec_robot_ros2/install/wheeltec_robot_rc:/home/leev/workspaces/wheeltec_robot_ros2/install/turn_on_wheeltec_robot:/home/leev/workspaces/wheeltec_robot_ros2/install/turn_on_launches:/home/leev/workspaces/wheeltec_robot_ros2/install/serial:/home/leev/workspaces/wheeltec_robot_ros2/install/robot_models_tf2:/home/leev/workspaces/wheeltec_robot_ros2/install/ls01:/home/leev/workspaces/wheeltec_robot_ros2/install/global_fusion:/home/leev/workspaces/wheeltec_robot_ros2/install/camera_models:/home/leev/workspaces/wheeltec_robot_ros2/install/astra_camera_msgs:/opt/ros/humble'), ('SHELL', '/bin/bash'), ('LC_NAME', 'ru_RU.UTF-8'), ('TERMINATOR_UUID', 'urn:uuid:5d149dba-c026-4b30-a865-9a543c90c49c'), ('QT_ACCESSIBILITY', '1'), ('GDMSESSION', 'ubuntu'), ('LESSCLOSE', '/usr/bin/lesspipe %s %s'), ('LC_MEASUREMENT', 'ru_RU.UTF-8'), ('GPG_AGENT_INFO', '/run/user/1000/gnupg/S.gpg-agent:0:1'), ('LC_IDENTIFICATION', 'ru_RU.UTF-8'), ('QT_IM_MODULE', 'ibus'), ('PWD', '/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/build/mavsdk_bridge'), ('LC_ALL', 'en_US.UTF-8'), ('CUDA_HOME', '/usr/local/cuda-12.2'), ('XDG_CONFIG_DIRS', '/etc/xdg/xdg-ubuntu:/etc/xdg'), ('XDG_DATA_DIRS', '/usr/share/ubuntu:/usr/share/gnome:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop'), ('PYTHONPATH', '/home/leev/workspaces/privyaznik_ws/install/privyaznik_msgs/local/lib/python3.10/dist-packages:/home/leev/workspaces/privyaznik_ws/install/coordinate_conversion_py/lib/python3.10/site-packages:/home/leev/workspaces/privyaznik_ws/install/aruco_precision_landing_ardupilot/lib/python3.10/site-packages:/home/leev/workspaces/privyaznik_ws/install/ardupilot_custom_launches/lib/python3.10/site-packages:/home/leev/workspaces/wheeltec_robot_ros2/install/wheeltec_robot_rc/lib/python3.10/site-packages:/home/leev/workspaces/wheeltec_robot_ros2/install/turn_on_launches/lib/python3.10/site-packages:/home/leev/workspaces/wheeltec_robot_ros2/install/astra_camera_msgs/local/lib/python3.10/dist-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('LC_NUMERIC', 'ru_RU.UTF-8'), ('LC_PAPER', 'ru_RU.UTF-8'), ('COLCON', '1'), ('VTE_VERSION', '6800'), ('CMAKE_PREFIX_PATH', '/home/leev/workspaces/privyaznik_ws/install/mavsdk_bridge:/home/leev/workspaces/privyaznik_ws/install/privyaznik_msgs:/home/leev/workspaces/json_test/install/json_tests:/home/leev/workspaces/wheeltec_robot_ros2/install/turn_on_wheeltec_robot:/home/leev/workspaces/wheeltec_robot_ros2/install/serial:/home/leev/workspaces/wheeltec_robot_ros2/install/robot_models_tf2:/home/leev/workspaces/wheeltec_robot_ros2/install/ls01:/home/leev/workspaces/wheeltec_robot_ros2/install/global_fusion:/home/leev/workspaces/wheeltec_robot_ros2/install/camera_models:/home/leev/workspaces/wheeltec_robot_ros2/install/astra_camera_msgs:/home/leev/workspaces/privyaznik_ws/install/coordinate_conversion_py:/home/leev/workspaces/privyaznik_ws/install/aruco_precision_landing_ardupilot:/home/leev/workspaces/privyaznik_ws/install/ardupilot_custom_launches:/home/leev/workspaces/wheeltec_robot_ros2/install/wheeltec_robot_rc:/home/leev/workspaces/wheeltec_robot_ros2/install/turn_on_launches:/opt/ros/humble')]), 'shell': False}
+[0.085908] (mavsdk_bridge) StdoutLine: {'line': b'-- The C compiler identification is GNU 11.4.0\n'}
+[0.099105] (-) TimerEvent: {}
+[0.145419] (mavsdk_bridge) StdoutLine: {'line': b'-- The CXX compiler identification is GNU 11.4.0\n'}
+[0.157128] (mavsdk_bridge) StdoutLine: {'line': b'-- Detecting C compiler ABI info\n'}
+[0.199243] (-) TimerEvent: {}
+[0.221779] (mavsdk_bridge) StdoutLine: {'line': b'-- Detecting C compiler ABI info - done\n'}
+[0.229864] (mavsdk_bridge) StdoutLine: {'line': b'-- Check for working C compiler: /usr/lib/ccache/cc - skipped\n'}
+[0.230085] (mavsdk_bridge) StdoutLine: {'line': b'-- Detecting C compile features\n'}
+[0.230222] (mavsdk_bridge) StdoutLine: {'line': b'-- Detecting C compile features - done\n'}
+[0.233244] (mavsdk_bridge) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info\n'}
+[0.299376] (-) TimerEvent: {}
+[0.304634] (mavsdk_bridge) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info - done\n'}
+[0.309940] (mavsdk_bridge) StdoutLine: {'line': b'-- Check for working CXX compiler: /usr/lib/ccache/c++ - skipped\n'}
+[0.310215] (mavsdk_bridge) StdoutLine: {'line': b'-- Detecting CXX compile features\n'}
+[0.310454] (mavsdk_bridge) StdoutLine: {'line': b'-- Detecting CXX compile features - done\n'}
+[0.314871] (mavsdk_bridge) StdoutLine: {'line': b'-- Found ament_cmake: 1.3.9 (/opt/ros/humble/share/ament_cmake/cmake)\n'}
+[0.399496] (-) TimerEvent: {}
+[0.499827] (-) TimerEvent: {}
+[0.600147] (-) TimerEvent: {}
+[0.651731] (mavsdk_bridge) StdoutLine: {'line': b'-- Found Python3: /usr/bin/python3 (found version "3.10.12") found components: Interpreter \n'}
+[0.700247] (-) TimerEvent: {}
+[0.760734] (mavsdk_bridge) StdoutLine: {'line': b'-- Found rclcpp: 16.0.9 (/opt/ros/humble/share/rclcpp/cmake)\n'}
+[0.800363] (-) TimerEvent: {}
+[0.814048] (mavsdk_bridge) StdoutLine: {'line': b'-- Found rosidl_generator_c: 3.1.5 (/opt/ros/humble/share/rosidl_generator_c/cmake)\n'}
+[0.821478] (mavsdk_bridge) StdoutLine: {'line': b'-- Found rosidl_adapter: 3.1.5 (/opt/ros/humble/share/rosidl_adapter/cmake)\n'}
+[0.831188] (mavsdk_bridge) StdoutLine: {'line': b'-- Found rosidl_generator_cpp: 3.1.5 (/opt/ros/humble/share/rosidl_generator_cpp/cmake)\n'}
+[0.844543] (mavsdk_bridge) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c\n'}
+[0.863563] (mavsdk_bridge) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp\n'}
+[0.900497] (-) TimerEvent: {}
+[0.943584] (mavsdk_bridge) StdoutLine: {'line': b'-- Found rmw_implementation_cmake: 6.1.2 (/opt/ros/humble/share/rmw_implementation_cmake/cmake)\n'}
+[0.947488] (mavsdk_bridge) StdoutLine: {'line': b'-- Found rmw_fastrtps_cpp: 6.2.6 (/opt/ros/humble/share/rmw_fastrtps_cpp/cmake)\n'}
+[1.000626] (-) TimerEvent: {}
+[1.073076] (mavsdk_bridge) StdoutLine: {'line': b'-- Found OpenSSL: /usr/lib/x86_64-linux-gnu/libcrypto.so (found version "3.0.2")  \n'}
+[1.100744] (-) TimerEvent: {}
+[1.105016] (mavsdk_bridge) StdoutLine: {'line': b'-- Found FastRTPS: /opt/ros/humble/include  \n'}
+[1.157080] (mavsdk_bridge) StdoutLine: {'line': b"-- Using RMW implementation 'rmw_fastrtps_cpp' as default\n"}
+[1.169703] (mavsdk_bridge) StdoutLine: {'line': b'-- Looking for pthread.h\n'}
+[1.200864] (-) TimerEvent: {}
+[1.264906] (mavsdk_bridge) StdoutLine: {'line': b'-- Looking for pthread.h - found\n'}
+[1.265229] (mavsdk_bridge) StdoutLine: {'line': b'-- Performing Test CMAKE_HAVE_LIBC_PTHREAD\n'}
+[1.300961] (-) TimerEvent: {}
+[1.359905] (mavsdk_bridge) StdoutLine: {'line': b'-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success\n'}
+[1.360844] (mavsdk_bridge) StdoutLine: {'line': b'-- Found Threads: TRUE  \n'}
+[1.401090] (-) TimerEvent: {}
+[1.481835] (mavsdk_bridge) StdoutLine: {'line': b'-- Found geometry_msgs: 4.2.3 (/opt/ros/humble/share/geometry_msgs/cmake)\n'}
+[1.501219] (-) TimerEvent: {}
+[1.515589] (mavsdk_bridge) StdoutLine: {'line': b'-- Found sensor_msgs: 4.2.3 (/opt/ros/humble/share/sensor_msgs/cmake)\n'}
+[1.577961] (mavsdk_bridge) StdoutLine: {'line': b'-- Found mavros_msgs: 2.7.0 (/opt/ros/humble/share/mavros_msgs/cmake)\n'}
+[1.601324] (-) TimerEvent: {}
+[1.701633] (-) TimerEvent: {}
+[1.801957] (-) TimerEvent: {}
+[1.845309] (mavsdk_bridge) StdoutLine: {'line': b'-- Found privyaznik_msgs: 0.0.0 (/home/leev/workspaces/privyaznik_ws/install/privyaznik_msgs/share/privyaznik_msgs/cmake)\n'}
+[1.902092] (-) TimerEvent: {}
+[1.942937] (mavsdk_bridge) StdoutLine: {'line': b'-- Found rclcpp_action: 16.0.9 (/opt/ros/humble/share/rclcpp_action/cmake)\n'}
+[1.971652] (mavsdk_bridge) StdoutLine: {'line': b'-- Found tf2: 0.25.6 (/opt/ros/humble/share/tf2/cmake)\n'}
+[1.991176] (mavsdk_bridge) StdoutLine: {'line': b'-- Found tf2_geometry_msgs: 0.25.6 (/opt/ros/humble/share/tf2_geometry_msgs/cmake)\n'}
+[2.002205] (-) TimerEvent: {}
+[2.014288] (mavsdk_bridge) StdoutLine: {'line': b'-- Found eigen3_cmake_module: 0.1.1 (/opt/ros/humble/share/eigen3_cmake_module/cmake)\n'}
+[2.015360] (mavsdk_bridge) StdoutLine: {'line': b'-- Found Eigen3: TRUE (found version "3.4.0") \n'}
+[2.015486] (mavsdk_bridge) StdoutLine: {'line': b'-- Ensuring Eigen3 include directory is part of orocos-kdl CMake target\n'}
+[2.102326] (-) TimerEvent: {}
+[2.202650] (-) TimerEvent: {}
+[2.232695] (mavsdk_bridge) StdoutLine: {'line': b'-- Found ament_lint_auto: 0.12.11 (/opt/ros/humble/share/ament_lint_auto/cmake)\n'}
+[2.302772] (-) TimerEvent: {}
+[2.330487] (mavsdk_bridge) StdoutLine: {'line': b"-- Added test 'cppcheck' to perform static code analysis on C / C++ code\n"}
+[2.330732] (mavsdk_bridge) StdoutLine: {'line': b'-- Configured cppcheck include dirs: \n'}
+[2.330842] (mavsdk_bridge) StdoutLine: {'line': b'-- Configured cppcheck exclude dirs and/or files: \n'}
+[2.340285] (mavsdk_bridge) StdoutLine: {'line': b"-- Added test 'lint_cmake' to check CMake code style\n"}
+[2.368330] (mavsdk_bridge) StdoutLine: {'line': b"-- Added test 'uncrustify' to check C / C++ code style\n"}
+[2.368550] (mavsdk_bridge) StdoutLine: {'line': b'-- Configured uncrustify additional arguments: \n'}
+[2.372058] (mavsdk_bridge) StdoutLine: {'line': b"-- Added test 'xmllint' to check XML markup files\n"}
+[2.373829] (mavsdk_bridge) StdoutLine: {'line': b'-- Configuring done\n'}
+[2.402905] (-) TimerEvent: {}
+[2.411032] (mavsdk_bridge) StdoutLine: {'line': b'-- Generating done\n'}
+[2.413392] (mavsdk_bridge) StdoutLine: {'line': b'-- Build files have been written to: /home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/build/mavsdk_bridge\n'}
+[2.425385] (mavsdk_bridge) CommandEnded: {'returncode': 0}
+[2.426078] (mavsdk_bridge) JobProgress: {'identifier': 'mavsdk_bridge', 'progress': 'build'}
+[2.427105] (mavsdk_bridge) Command: {'cmd': ['/usr/bin/cmake', '--build', '/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/build/mavsdk_bridge', '--', '-j12', '-l12'], 'cwd': '/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/build/mavsdk_bridge', 'env': OrderedDict([('GZ_SIM_SYSTEM_PLUGIN_PATH', '/home/leev/gz_ws/src/ardupilot_gazebo/build:'), ('LESSOPEN', '| /usr/bin/lesspipe %s'), ('GZ_SIM_RESOURCE_PATH', '/home/leev/workspaces/privyaznik_ws/src/ardupilot_custom_launches/worlds:/home/leev/workspaces/privyaznik_ws/src/ardupilot_custom_launches/model:/home/leev/gz_ws/src/ardupilot_gazebo/models:/home/leev/gz_ws/src/ardupilot_gazebo/worlds:'), ('USER', 'leev'), ('LC_TIME', 'ru_RU.UTF-8'), ('XDG_SESSION_TYPE', 'x11'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/home/leev/workspaces/privyaznik_ws/install/privyaznik_msgs/lib:/home/leev/workspaces/wheeltec_robot_ros2/install/turn_on_wheeltec_robot/lib:/home/leev/workspaces/wheeltec_robot_ros2/install/serial/lib:/home/leev/workspaces/wheeltec_robot_ros2/install/ls01/lib:/home/leev/workspaces/wheeltec_robot_ros2/install/camera_models/lib:/home/leev/workspaces/wheeltec_robot_ros2/install/astra_camera_msgs/lib:/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/home/leev'), ('OLDPWD', '/home/leev/workspaces/privyaznik_ws'), ('DESKTOP_SESSION', 'ubuntu'), ('ROS_PYTHON_VERSION', '3'), ('GNOME_SHELL_SESSION_MODE', 'ubuntu'), ('GTK_MODULES', 'gail:atk-bridge'), ('LC_MONETARY', 'ru_RU.UTF-8'), ('MANAGERPID', '1881'), ('SYSTEMD_EXEC_PID', '2601'), ('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/run/user/1000/bus'), ('COLORTERM', 'truecolor'), ('TERMINATOR_DBUS_NAME', 'net.tenshu.Terminator23558193cd9818af7fe4d2c2f5bd9d00f'), ('GIO_LAUNCHED_DESKTOP_FILE_PID', '8387'), ('COLCON_PREFIX_PATH', '/home/leev/workspaces/json_test/install:/home/leev/workspaces/wheeltec_robot_ros2/install:/home/leev/workspaces/privyaznik_ws/install'), ('ROS_DISTRO', 'humble'), ('GTK_IM_MODULE', 'ibus'), ('LOGNAME', 'leev'), ('JOURNAL_STREAM', '8:43503'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('XDG_SESSION_CLASS', 'user'), ('USERNAME', 'leev'), ('TERM', 'xterm-256color'), ('GNOME_DESKTOP_SESSION_ID', 'this-is-deprecated'), ('ROS_LOCALHOST_ONLY', '0'), ('WINDOWPATH', '2'), ('PATH', '/home/leev/workspaces/wheeltec_robot_ros2/install/turn_on_wheeltec_robot/bin:/home/leev/workspaces/wheeltec_robot_ros2/install/global_fusion/bin:/home/leev/workspaces/wheeltec_robot_ros2/install/camera_models/bin:/opt/ros/humble/bin:/usr/lib/ccache:/home/leev/ardupilot/Tools/autotest:/opt/gcc-arm-none-eabi-10-2020-q4-major/bin:/home/leev/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin'), ('SESSION_MANAGER', 'local/leev-IdeaPad-Gaming-3-15ARH7:@/tmp/.ICE-unix/2295,unix/leev-IdeaPad-Gaming-3-15ARH7:/tmp/.ICE-unix/2295'), ('INVOCATION_ID', '52ae06d720704034a1395adbc665b435'), ('XDG_MENU_PREFIX', 'gnome-'), ('LC_ADDRESS', 'ru_RU.UTF-8'), ('XDG_RUNTIME_DIR', '/run/user/1000'), ('DISPLAY', ':1'), ('TERMINATOR_DBUS_PATH', '/net/tenshu/Terminator2'), ('LANG', 'en_US.UTF-8'), ('XDG_CURRENT_DESKTOP', 'ubuntu:GNOME'), ('IBUS_DISABLE_SNOOPER', '1'), ('LC_TELEPHONE', 'ru_RU.UTF-8'), ('XMODIFIERS', '@im=ibus'), ('XDG_SESSION_DESKTOP', 'ubuntu'), ('XAUTHORITY', '/run/user/1000/gdm/Xauthority'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('SSH_AGENT_LAUNCHER', 'gnome-keyring'), ('SSH_AUTH_SOCK', '/run/user/1000/keyring/ssh'), ('ROS_DOMAIN_ID', '207'), ('AMENT_PREFIX_PATH', '/home/leev/workspaces/privyaznik_ws/install/mavsdk_bridge:/home/leev/workspaces/privyaznik_ws/install/privyaznik_msgs:/home/leev/workspaces/privyaznik_ws/install/coordinate_conversion_py:/home/leev/workspaces/privyaznik_ws/install/aruco_precision_landing_ardupilot:/home/leev/workspaces/privyaznik_ws/install/ardupilot_custom_launches:/home/leev/workspaces/json_test/install/json_tests:/home/leev/workspaces/wheeltec_robot_ros2/install/wheeltec_robot_rc:/home/leev/workspaces/wheeltec_robot_ros2/install/turn_on_wheeltec_robot:/home/leev/workspaces/wheeltec_robot_ros2/install/turn_on_launches:/home/leev/workspaces/wheeltec_robot_ros2/install/serial:/home/leev/workspaces/wheeltec_robot_ros2/install/robot_models_tf2:/home/leev/workspaces/wheeltec_robot_ros2/install/ls01:/home/leev/workspaces/wheeltec_robot_ros2/install/global_fusion:/home/leev/workspaces/wheeltec_robot_ros2/install/camera_models:/home/leev/workspaces/wheeltec_robot_ros2/install/astra_camera_msgs:/opt/ros/humble'), ('SHELL', '/bin/bash'), ('LC_NAME', 'ru_RU.UTF-8'), ('TERMINATOR_UUID', 'urn:uuid:5d149dba-c026-4b30-a865-9a543c90c49c'), ('QT_ACCESSIBILITY', '1'), ('GDMSESSION', 'ubuntu'), ('LESSCLOSE', '/usr/bin/lesspipe %s %s'), ('LC_MEASUREMENT', 'ru_RU.UTF-8'), ('GPG_AGENT_INFO', '/run/user/1000/gnupg/S.gpg-agent:0:1'), ('LC_IDENTIFICATION', 'ru_RU.UTF-8'), ('QT_IM_MODULE', 'ibus'), ('PWD', '/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/build/mavsdk_bridge'), ('LC_ALL', 'en_US.UTF-8'), ('CUDA_HOME', '/usr/local/cuda-12.2'), ('XDG_CONFIG_DIRS', '/etc/xdg/xdg-ubuntu:/etc/xdg'), ('XDG_DATA_DIRS', '/usr/share/ubuntu:/usr/share/gnome:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop'), ('PYTHONPATH', '/home/leev/workspaces/privyaznik_ws/install/privyaznik_msgs/local/lib/python3.10/dist-packages:/home/leev/workspaces/privyaznik_ws/install/coordinate_conversion_py/lib/python3.10/site-packages:/home/leev/workspaces/privyaznik_ws/install/aruco_precision_landing_ardupilot/lib/python3.10/site-packages:/home/leev/workspaces/privyaznik_ws/install/ardupilot_custom_launches/lib/python3.10/site-packages:/home/leev/workspaces/wheeltec_robot_ros2/install/wheeltec_robot_rc/lib/python3.10/site-packages:/home/leev/workspaces/wheeltec_robot_ros2/install/turn_on_launches/lib/python3.10/site-packages:/home/leev/workspaces/wheeltec_robot_ros2/install/astra_camera_msgs/local/lib/python3.10/dist-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('LC_NUMERIC', 'ru_RU.UTF-8'), ('LC_PAPER', 'ru_RU.UTF-8'), ('COLCON', '1'), ('VTE_VERSION', '6800'), ('CMAKE_PREFIX_PATH', '/home/leev/workspaces/privyaznik_ws/install/mavsdk_bridge:/home/leev/workspaces/privyaznik_ws/install/privyaznik_msgs:/home/leev/workspaces/json_test/install/json_tests:/home/leev/workspaces/wheeltec_robot_ros2/install/turn_on_wheeltec_robot:/home/leev/workspaces/wheeltec_robot_ros2/install/serial:/home/leev/workspaces/wheeltec_robot_ros2/install/robot_models_tf2:/home/leev/workspaces/wheeltec_robot_ros2/install/ls01:/home/leev/workspaces/wheeltec_robot_ros2/install/global_fusion:/home/leev/workspaces/wheeltec_robot_ros2/install/camera_models:/home/leev/workspaces/wheeltec_robot_ros2/install/astra_camera_msgs:/home/leev/workspaces/privyaznik_ws/install/coordinate_conversion_py:/home/leev/workspaces/privyaznik_ws/install/aruco_precision_landing_ardupilot:/home/leev/workspaces/privyaznik_ws/install/ardupilot_custom_launches:/home/leev/workspaces/wheeltec_robot_ros2/install/wheeltec_robot_rc:/home/leev/workspaces/wheeltec_robot_ros2/install/turn_on_launches:/opt/ros/humble')]), 'shell': False}
+[2.488117] (mavsdk_bridge) StdoutLine: {'line': b'[ 22%] \x1b[32mBuilding CXX object CMakeFiles/client_commands_takeoff.dir/src/client_commands_takeoff.cpp.o\x1b[0m\n'}
+[2.488361] (mavsdk_bridge) StdoutLine: {'line': b'[ 22%] \x1b[32mBuilding CXX object CMakeFiles/action_client_land.dir/src/action_client_land.cpp.o\x1b[0m\n'}
+[2.488460] (mavsdk_bridge) StdoutLine: {'line': b'[ 22%] \x1b[32mBuilding CXX object CMakeFiles/try_move.dir/src/try_move.cpp.o\x1b[0m\n'}
+[2.488532] (mavsdk_bridge) StdoutLine: {'line': b'[ 22%] \x1b[32mBuilding CXX object CMakeFiles/precision_landing_transmitter.dir/src/precision_landing_transmitter.cpp.o\x1b[0m\n'}
+[2.489369] (mavsdk_bridge) StdoutLine: {'line': b'[ 38%] \x1b[32mBuilding CXX object CMakeFiles/action_client.dir/src/action_client.cpp.o\x1b[0m\n'}
+[2.489544] (mavsdk_bridge) StdoutLine: {'line': b'[ 38%] \x1b[32mBuilding CXX object CMakeFiles/try_land.dir/src/try_land.cpp.o\x1b[0m\n'}
+[2.489692] (mavsdk_bridge) StdoutLine: {'line': b'[ 38%] \x1b[32mBuilding CXX object CMakeFiles/try_takeoff.dir/src/try_takeoff.cpp.o\x1b[0m\n'}
+[2.491265] (mavsdk_bridge) StdoutLine: {'line': b'[ 44%] \x1b[32mBuilding CXX object CMakeFiles/client_commands_land.dir/src/client_commands_land.cpp.o\x1b[0m\n'}
+[2.491465] (mavsdk_bridge) StdoutLine: {'line': b'[ 50%] \x1b[32mBuilding CXX object CMakeFiles/action_service.dir/src/action_service.cpp.o\x1b[0m\n'}
+[2.503017] (-) TimerEvent: {}
+[2.507466] (mavsdk_bridge) StderrLine: {'line': b'In file included from \x1b[01m\x1b[K/opt/ros/humble/include/rclcpp/rclcpp/logging.hpp:24\x1b[m\x1b[K,\n'}
+[2.507700] (mavsdk_bridge) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/opt/ros/humble/include/rclcpp/rclcpp/client.hpp:40\x1b[m\x1b[K,\n'}
+[2.507806] (mavsdk_bridge) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/opt/ros/humble/include/rclcpp/rclcpp/callback_group.hpp:24\x1b[m\x1b[K,\n'}
+[2.507898] (mavsdk_bridge) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/opt/ros/humble/include/rclcpp/rclcpp/any_executable.hpp:20\x1b[m\x1b[K,\n'}
+[2.507983] (mavsdk_bridge) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/opt/ros/humble/include/rclcpp/rclcpp/memory_strategy.hpp:25\x1b[m\x1b[K,\n'}
+[2.508065] (mavsdk_bridge) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/opt/ros/humble/include/rclcpp/rclcpp/memory_strategies.hpp:18\x1b[m\x1b[K,\n'}
+[2.508152] (mavsdk_bridge) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/opt/ros/humble/include/rclcpp/rclcpp/executor_options.hpp:20\x1b[m\x1b[K,\n'}
+[2.508230] (mavsdk_bridge) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/opt/ros/humble/include/rclcpp/rclcpp/executor.hpp:37\x1b[m\x1b[K,\n'}
+[2.508310] (mavsdk_bridge) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/opt/ros/humble/include/rclcpp/rclcpp/executors/multi_threaded_executor.hpp:25\x1b[m\x1b[K,\n'}
+[2.508388] (mavsdk_bridge) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/opt/ros/humble/include/rclcpp/rclcpp/executors.hpp:21\x1b[m\x1b[K,\n'}
+[2.508471] (mavsdk_bridge) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/opt/ros/humble/include/rclcpp/rclcpp/rclcpp.hpp:155\x1b[m\x1b[K,\n'}
+[2.508550] (mavsdk_bridge) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/src/client_commands_takeoff.cpp:6\x1b[m\x1b[K:\n'}
+[2.508630] (mavsdk_bridge) StderrLine: {'line': b'\x1b[01m\x1b[K/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/src/client_commands_takeoff.cpp:\x1b[m\x1b[K In function \xe2\x80\x98\x1b[01m\x1b[Kint main(int, char**)\x1b[m\x1b[K\xe2\x80\x99:\n'}
+[2.508712] (mavsdk_bridge) StderrLine: {'line': b'\x1b[01m\x1b[K/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/src/client_commands_takeoff.cpp:61:47:\x1b[m\x1b[K \x1b[01;35m\x1b[Kwarning: \x1b[m\x1b[Kformat \xe2\x80\x98\x1b[01m\x1b[K%ld\x1b[m\x1b[K\xe2\x80\x99 expects argument of type \xe2\x80\x98\x1b[01m\x1b[Klong int\x1b[m\x1b[K\xe2\x80\x99, but argument 5 has type \xe2\x80\x98\x1b[01m\x1b[Kint\x1b[m\x1b[K\xe2\x80\x99 [\x1b[01;35m\x1b[K-Wformat=\x1b[m\x1b[K]\n'}
+[2.508808] (mavsdk_bridge) StderrLine: {'line': b'   61 |     RCLCPP_INFO(rclcpp::get_logger("rclcpp"), \x1b[01;35m\x1b[K"Result: %ld"\x1b[m\x1b[K, \x1b[32m\x1b[Kresult.get()->result\x1b[m\x1b[K);\n'}
+[2.508896] (mavsdk_bridge) StderrLine: {'line': b'      |                                               \x1b[01;35m\x1b[K^~~~~~~~~~~~~\x1b[m\x1b[K  \x1b[32m\x1b[K~~~~~~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[2.508972] (mavsdk_bridge) StderrLine: {'line': b'      |                                                                            \x1b[32m\x1b[K|\x1b[m\x1b[K\n'}
+[2.509050] (mavsdk_bridge) StderrLine: {'line': b'      |                                                                            \x1b[32m\x1b[Kint\x1b[m\x1b[K\n'}
+[2.509123] (mavsdk_bridge) StderrLine: {'line': b'\x1b[01m\x1b[K/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/src/client_commands_takeoff.cpp:61:58:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kformat string is defined here\n'}
+[2.509225] (mavsdk_bridge) StderrLine: {'line': b'   61 |     RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Result: \x1b[01;36m\x1b[K%ld\x1b[m\x1b[K", result.get()->result);\n'}
+[2.509314] (mavsdk_bridge) StderrLine: {'line': b'      |                                                        \x1b[01;36m\x1b[K~~^\x1b[m\x1b[K\n'}
+[2.509395] (mavsdk_bridge) StderrLine: {'line': b'      |                                                          \x1b[01;36m\x1b[K|\x1b[m\x1b[K\n'}
+[2.509470] (mavsdk_bridge) StderrLine: {'line': b'      |                                                          \x1b[01;36m\x1b[Klong int\x1b[m\x1b[K\n'}
+[2.509555] (mavsdk_bridge) StderrLine: {'line': b'      |                                                        \x1b[32m\x1b[K%d\x1b[m\x1b[K\n'}
+[2.509917] (mavsdk_bridge) StderrLine: {'line': b'In file included from \x1b[01m\x1b[K/opt/ros/humble/include/rclcpp/rclcpp/logging.hpp:24\x1b[m\x1b[K,\n'}
+[2.510043] (mavsdk_bridge) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/opt/ros/humble/include/rclcpp/rclcpp/client.hpp:40\x1b[m\x1b[K,\n'}
+[2.510116] (mavsdk_bridge) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/opt/ros/humble/include/rclcpp/rclcpp/callback_group.hpp:24\x1b[m\x1b[K,\n'}
+[2.510185] (mavsdk_bridge) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/opt/ros/humble/include/rclcpp/rclcpp/any_executable.hpp:20\x1b[m\x1b[K,\n'}
+[2.510251] (mavsdk_bridge) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/opt/ros/humble/include/rclcpp/rclcpp/memory_strategy.hpp:25\x1b[m\x1b[K,\n'}
+[2.510316] (mavsdk_bridge) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/opt/ros/humble/include/rclcpp/rclcpp/memory_strategies.hpp:18\x1b[m\x1b[K,\n'}
+[2.510382] (mavsdk_bridge) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/opt/ros/humble/include/rclcpp/rclcpp/executor_options.hpp:20\x1b[m\x1b[K,\n'}
+[2.510451] (mavsdk_bridge) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/opt/ros/humble/include/rclcpp/rclcpp/executor.hpp:37\x1b[m\x1b[K,\n'}
+[2.510515] (mavsdk_bridge) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/opt/ros/humble/include/rclcpp/rclcpp/executors/multi_threaded_executor.hpp:25\x1b[m\x1b[K,\n'}
+[2.510580] (mavsdk_bridge) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/opt/ros/humble/include/rclcpp/rclcpp/executors.hpp:21\x1b[m\x1b[K,\n'}
+[2.510644] (mavsdk_bridge) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/opt/ros/humble/include/rclcpp/rclcpp/rclcpp.hpp:155\x1b[m\x1b[K,\n'}
+[2.510711] (mavsdk_bridge) StderrLine: {'line': b'                 from \x1b[01m\x1b[K/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/src/client_commands_land.cpp:6\x1b[m\x1b[K:\n'}
+[2.510780] (mavsdk_bridge) StderrLine: {'line': b'\x1b[01m\x1b[K/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/src/client_commands_land.cpp:\x1b[m\x1b[K In function \xe2\x80\x98\x1b[01m\x1b[Kint main(int, char**)\x1b[m\x1b[K\xe2\x80\x99:\n'}
+[2.510845] (mavsdk_bridge) StderrLine: {'line': b'\x1b[01m\x1b[K/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/src/client_commands_land.cpp:61:47:\x1b[m\x1b[K \x1b[01;35m\x1b[Kwarning: \x1b[m\x1b[Kformat \xe2\x80\x98\x1b[01m\x1b[K%ld\x1b[m\x1b[K\xe2\x80\x99 expects argument of type \xe2\x80\x98\x1b[01m\x1b[Klong int\x1b[m\x1b[K\xe2\x80\x99, but argument 5 has type \xe2\x80\x98\x1b[01m\x1b[Kint\x1b[m\x1b[K\xe2\x80\x99 [\x1b[01;35m\x1b[K-Wformat=\x1b[m\x1b[K]\n'}
+[2.510949] (mavsdk_bridge) StderrLine: {'line': b'   61 |     RCLCPP_INFO(rclcpp::get_logger("rclcpp"), \x1b[01;35m\x1b[K"Result: %ld"\x1b[m\x1b[K, \x1b[32m\x1b[Kresult.get()->result\x1b[m\x1b[K);\n'}
+[2.511019] (mavsdk_bridge) StderrLine: {'line': b'      |                                               \x1b[01;35m\x1b[K^~~~~~~~~~~~~\x1b[m\x1b[K  \x1b[32m\x1b[K~~~~~~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[2.511088] (mavsdk_bridge) StderrLine: {'line': b'      |                                                                            \x1b[32m\x1b[K|\x1b[m\x1b[K\n'}
+[2.511158] (mavsdk_bridge) StderrLine: {'line': b'      |                                                                            \x1b[32m\x1b[Kint\x1b[m\x1b[K\n'}
+[2.511229] (mavsdk_bridge) StderrLine: {'line': b'\x1b[01m\x1b[K/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/src/client_commands_land.cpp:61:58:\x1b[m\x1b[K \x1b[01;36m\x1b[Knote: \x1b[m\x1b[Kformat string is defined here\n'}
+[2.511301] (mavsdk_bridge) StderrLine: {'line': b'   61 |     RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Result: \x1b[01;36m\x1b[K%ld\x1b[m\x1b[K", result.get()->result);\n'}
+[2.511372] (mavsdk_bridge) StderrLine: {'line': b'      |                                                        \x1b[01;36m\x1b[K~~^\x1b[m\x1b[K\n'}
+[2.511439] (mavsdk_bridge) StderrLine: {'line': b'      |                                                          \x1b[01;36m\x1b[K|\x1b[m\x1b[K\n'}
+[2.511504] (mavsdk_bridge) StderrLine: {'line': b'      |                                                          \x1b[01;36m\x1b[Klong int\x1b[m\x1b[K\n'}
+[2.511565] (mavsdk_bridge) StderrLine: {'line': b'      |                                                        \x1b[32m\x1b[K%d\x1b[m\x1b[K\n'}
+[2.516703] (mavsdk_bridge) StdoutLine: {'line': b'[ 55%] \x1b[32m\x1b[1mLinking CXX executable try_move\x1b[0m\n'}
+[2.519446] (mavsdk_bridge) StdoutLine: {'line': b'[ 61%] \x1b[32m\x1b[1mLinking CXX executable try_takeoff\x1b[0m\n'}
+[2.519682] (mavsdk_bridge) StdoutLine: {'line': b'[ 66%] \x1b[32m\x1b[1mLinking CXX executable try_land\x1b[0m\n'}
+[2.522551] (mavsdk_bridge) StdoutLine: {'line': b'[ 72%] \x1b[32m\x1b[1mLinking CXX executable client_commands_takeoff\x1b[0m\n'}
+[2.523875] (mavsdk_bridge) StdoutLine: {'line': b'[ 83%] \x1b[32m\x1b[1mLinking CXX executable action_client_land\x1b[0m\n'}
+[2.524055] (mavsdk_bridge) StdoutLine: {'line': b'[ 83%] \x1b[32m\x1b[1mLinking CXX executable action_service\x1b[0m\n'}
+[2.524200] (mavsdk_bridge) StdoutLine: {'line': b'[ 94%] \x1b[32m\x1b[1mLinking CXX executable client_commands_land\x1b[0m\n'}
+[2.524311] (mavsdk_bridge) StdoutLine: {'line': b'[ 94%] \x1b[32m\x1b[1mLinking CXX executable action_client\x1b[0m\n'}
+[2.603198] (-) TimerEvent: {}
+[2.703768] (-) TimerEvent: {}
+[2.804309] (-) TimerEvent: {}
+[2.902176] (mavsdk_bridge) StdoutLine: {'line': b'[ 94%] Built target client_commands_land\n'}
+[2.904415] (-) TimerEvent: {}
+[2.907428] (mavsdk_bridge) StdoutLine: {'line': b'[ 94%] Built target client_commands_takeoff\n'}
+[2.907695] (mavsdk_bridge) StdoutLine: {'line': b'[ 94%] Built target action_service\n'}
+[2.925808] (mavsdk_bridge) StdoutLine: {'line': b'[ 94%] Built target action_client\n'}
+[2.949115] (mavsdk_bridge) StdoutLine: {'line': b'[ 94%] Built target action_client_land\n'}
+[2.951778] (mavsdk_bridge) StdoutLine: {'line': b'[ 94%] Built target try_move\n'}
+[2.953931] (mavsdk_bridge) StdoutLine: {'line': b'[ 94%] Built target try_land\n'}
+[2.965835] (mavsdk_bridge) StdoutLine: {'line': b'[ 94%] Built target try_takeoff\n'}
+[3.004547] (-) TimerEvent: {}
+[3.104895] (-) TimerEvent: {}
+[3.205356] (-) TimerEvent: {}
+[3.305708] (-) TimerEvent: {}
+[3.406068] (-) TimerEvent: {}
+[3.506410] (-) TimerEvent: {}
+[3.606784] (-) TimerEvent: {}
+[3.707167] (-) TimerEvent: {}
+[3.807536] (-) TimerEvent: {}
+[3.907897] (-) TimerEvent: {}
+[4.008252] (-) TimerEvent: {}
+[4.108549] (-) TimerEvent: {}
+[4.208906] (-) TimerEvent: {}
+[4.309212] (-) TimerEvent: {}
+[4.409514] (-) TimerEvent: {}
+[4.509844] (-) TimerEvent: {}
+[4.610226] (-) TimerEvent: {}
+[4.710540] (-) TimerEvent: {}
+[4.810850] (-) TimerEvent: {}
+[4.911174] (-) TimerEvent: {}
+[5.011490] (-) TimerEvent: {}
+[5.111801] (-) TimerEvent: {}
+[5.212349] (-) TimerEvent: {}
+[5.312893] (-) TimerEvent: {}
+[5.413256] (-) TimerEvent: {}
+[5.513604] (-) TimerEvent: {}
+[5.613965] (-) TimerEvent: {}
+[5.714308] (-) TimerEvent: {}
+[5.814661] (-) TimerEvent: {}
+[5.915005] (-) TimerEvent: {}
+[6.015327] (-) TimerEvent: {}
+[6.115924] (-) TimerEvent: {}
+[6.216335] (-) TimerEvent: {}
+[6.316679] (-) TimerEvent: {}
+[6.417049] (-) TimerEvent: {}
+[6.517428] (-) TimerEvent: {}
+[6.617752] (-) TimerEvent: {}
+[6.718081] (-) TimerEvent: {}
+[6.818419] (-) TimerEvent: {}
+[6.918765] (-) TimerEvent: {}
+[7.019135] (-) TimerEvent: {}
+[7.119613] (-) TimerEvent: {}
+[7.219964] (-) TimerEvent: {}
+[7.320295] (-) TimerEvent: {}
+[7.420618] (-) TimerEvent: {}
+[7.520943] (-) TimerEvent: {}
+[7.621291] (-) TimerEvent: {}
+[7.721623] (-) TimerEvent: {}
+[7.821961] (-) TimerEvent: {}
+[7.922600] (-) TimerEvent: {}
+[8.022948] (-) TimerEvent: {}
+[8.123296] (-) TimerEvent: {}
+[8.223642] (-) TimerEvent: {}
+[8.324262] (-) TimerEvent: {}
+[8.424602] (-) TimerEvent: {}
+[8.524949] (-) TimerEvent: {}
+[8.625284] (-) TimerEvent: {}
+[8.725621] (-) TimerEvent: {}
+[8.825969] (-) TimerEvent: {}
+[8.926307] (-) TimerEvent: {}
+[9.026641] (-) TimerEvent: {}
+[9.126991] (-) TimerEvent: {}
+[9.227336] (-) TimerEvent: {}
+[9.327670] (-) TimerEvent: {}
+[9.428009] (-) TimerEvent: {}
+[9.528347] (-) TimerEvent: {}
+[9.628684] (-) TimerEvent: {}
+[9.729020] (-) TimerEvent: {}
+[9.829497] (-) TimerEvent: {}
+[9.929834] (-) TimerEvent: {}
+[10.030170] (-) TimerEvent: {}
+[10.130507] (-) TimerEvent: {}
+[10.230862] (-) TimerEvent: {}
+[10.331218] (-) TimerEvent: {}
+[10.431902] (-) TimerEvent: {}
+[10.532259] (-) TimerEvent: {}
+[10.632615] (-) TimerEvent: {}
+[10.732973] (-) TimerEvent: {}
+[10.833407] (-) TimerEvent: {}
+[10.933706] (-) TimerEvent: {}
+[11.034053] (-) TimerEvent: {}
+[11.134384] (-) TimerEvent: {}
+[11.234720] (-) TimerEvent: {}
+[11.335049] (-) TimerEvent: {}
+[11.435391] (-) TimerEvent: {}
+[11.535732] (-) TimerEvent: {}
+[11.636097] (-) TimerEvent: {}
+[11.736499] (-) TimerEvent: {}
+[11.836832] (-) TimerEvent: {}
+[11.937197] (-) TimerEvent: {}
+[12.037600] (-) TimerEvent: {}
+[12.137972] (-) TimerEvent: {}
+[12.238315] (-) TimerEvent: {}
+[12.338646] (-) TimerEvent: {}
+[12.438979] (-) TimerEvent: {}
+[12.539305] (-) TimerEvent: {}
+[12.639636] (-) TimerEvent: {}
+[12.739959] (-) TimerEvent: {}
+[12.840299] (-) TimerEvent: {}
+[12.940623] (-) TimerEvent: {}
+[13.040950] (-) TimerEvent: {}
+[13.141273] (-) TimerEvent: {}
+[13.241596] (-) TimerEvent: {}
+[13.341923] (-) TimerEvent: {}
+[13.442238] (-) TimerEvent: {}
+[13.542554] (-) TimerEvent: {}
+[13.642882] (-) TimerEvent: {}
+[13.743208] (-) TimerEvent: {}
+[13.843534] (-) TimerEvent: {}
+[13.943860] (-) TimerEvent: {}
+[14.044176] (-) TimerEvent: {}
+[14.144493] (-) TimerEvent: {}
+[14.244806] (-) TimerEvent: {}
+[14.345133] (-) TimerEvent: {}
+[14.445471] (-) TimerEvent: {}
+[14.545793] (-) TimerEvent: {}
+[14.646112] (-) TimerEvent: {}
+[14.746435] (-) TimerEvent: {}
+[14.846765] (-) TimerEvent: {}
+[14.947089] (-) TimerEvent: {}
+[15.047416] (-) TimerEvent: {}
+[15.147735] (-) TimerEvent: {}
+[15.248063] (-) TimerEvent: {}
+[15.348499] (-) TimerEvent: {}
+[15.448877] (-) TimerEvent: {}
+[15.549210] (-) TimerEvent: {}
+[15.649529] (-) TimerEvent: {}
+[15.749850] (-) TimerEvent: {}
+[15.850187] (-) TimerEvent: {}
+[15.950530] (-) TimerEvent: {}
+[16.050858] (-) TimerEvent: {}
+[16.151128] (-) TimerEvent: {}
+[16.251408] (-) TimerEvent: {}
+[16.351686] (-) TimerEvent: {}
+[16.451970] (-) TimerEvent: {}
+[16.552262] (-) TimerEvent: {}
+[16.652608] (-) TimerEvent: {}
+[16.752971] (-) TimerEvent: {}
+[16.853316] (-) TimerEvent: {}
+[16.869369] (mavsdk_bridge) StderrLine: {'line': b'In file included from \x1b[01m\x1b[K/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/src/precision_landing_transmitter.cpp:25\x1b[m\x1b[K:\n'}
+[16.869562] (mavsdk_bridge) StderrLine: {'line': b'\x1b[01m\x1b[K/opt/ros/humble/include/tf2_geometry_msgs/tf2_geometry_msgs/tf2_geometry_msgs.h:35:2:\x1b[m\x1b[K \x1b[01;35m\x1b[Kwarning: \x1b[m\x1b[K#warning This header is obsolete, please include tf2_geometry_msgs/tf2_geometry_msgs.hpp instead [\x1b[01;35m\x1b[K-Wcpp\x1b[m\x1b[K]\n'}
+[16.869733] (mavsdk_bridge) StderrLine: {'line': b'   35 | #\x1b[01;35m\x1b[Kwarning\x1b[m\x1b[K This header is obsolete, please include tf2_geometry_msgs/tf2_geometry_msgs.hpp instead\n'}
+[16.869800] (mavsdk_bridge) StderrLine: {'line': b'      |  \x1b[01;35m\x1b[K^~~~~~~\x1b[m\x1b[K\n'}
+[16.869859] (mavsdk_bridge) StderrLine: {'line': b'\x1b[01m\x1b[K/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/src/precision_landing_transmitter.cpp:\x1b[m\x1b[K In function \xe2\x80\x98\x1b[01m\x1b[Kmavsdk::MissionRaw::MissionItem make_mission_item_wp(double, double, float, float, bool, uint16_t&, bool)\x1b[m\x1b[K\xe2\x80\x99:\n'}
+[16.869920] (mavsdk_bridge) StderrLine: {'line': b'\x1b[01m\x1b[K/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/src/precision_landing_transmitter.cpp:54:11:\x1b[m\x1b[K \x1b[01;35m\x1b[Kwarning: \x1b[m\x1b[Kunused parameter \xe2\x80\x98\x1b[01m\x1b[Kspeed_m_s\x1b[m\x1b[K\xe2\x80\x99 [\x1b[01;35m\x1b[K-Wunused-parameter\x1b[m\x1b[K]\n'}
+[16.869980] (mavsdk_bridge) StderrLine: {'line': b'   54 |     \x1b[01;35m\x1b[Kfloat speed_m_s\x1b[m\x1b[K, bool is_fly_through, uint16_t &seq, bool is_current)\n'}
+[16.870041] (mavsdk_bridge) StderrLine: {'line': b'      |     \x1b[01;35m\x1b[K~~~~~~^~~~~~~~~\x1b[m\x1b[K\n'}
+[16.870102] (mavsdk_bridge) StderrLine: {'line': b'\x1b[01m\x1b[K/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/src/precision_landing_transmitter.cpp:54:27:\x1b[m\x1b[K \x1b[01;35m\x1b[Kwarning: \x1b[m\x1b[Kunused parameter \xe2\x80\x98\x1b[01m\x1b[Kis_fly_through\x1b[m\x1b[K\xe2\x80\x99 [\x1b[01;35m\x1b[K-Wunused-parameter\x1b[m\x1b[K]\n'}
+[16.870164] (mavsdk_bridge) StderrLine: {'line': b'   54 |     float speed_m_s, \x1b[01;35m\x1b[Kbool is_fly_through\x1b[m\x1b[K, uint16_t &seq, bool is_current)\n'}
+[16.870229] (mavsdk_bridge) StderrLine: {'line': b'      |                      \x1b[01;35m\x1b[K~~~~~^~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[16.870291] (mavsdk_bridge) StderrLine: {'line': b'\x1b[01m\x1b[K/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/src/precision_landing_transmitter.cpp:\x1b[m\x1b[K In function \xe2\x80\x98\x1b[01m\x1b[Kmavsdk::MissionRaw::MissionItem create_mission_item(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, float, float, float, float, float, float, float, uint32_t)\x1b[m\x1b[K\xe2\x80\x99:\n'}
+[16.870359] (mavsdk_bridge) StderrLine: {'line': b'\x1b[01m\x1b[K/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/src/precision_landing_transmitter.cpp:94:54:\x1b[m\x1b[K \x1b[01;35m\x1b[Kwarning: \x1b[m\x1b[Kunused parameter \xe2\x80\x98\x1b[01m\x1b[K_mission_type\x1b[m\x1b[K\xe2\x80\x99 [\x1b[01;35m\x1b[K-Wunused-parameter\x1b[m\x1b[K]\n'}
+[16.870421] (mavsdk_bridge) StderrLine: {'line': b'   94 |                                             \x1b[01;35m\x1b[Kuint32_t _mission_type\x1b[m\x1b[K)\n'}
+[16.870482] (mavsdk_bridge) StderrLine: {'line': b'      |                                             \x1b[01;35m\x1b[K~~~~~~~~~^~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[16.870554] (mavsdk_bridge) StderrLine: {'line': b'\x1b[01m\x1b[K/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/src/precision_landing_transmitter.cpp:\x1b[m\x1b[K In function \xe2\x80\x98\x1b[01m\x1b[Kbool position_is_initialized(mavsdk::Telemetry::Position)\x1b[m\x1b[K\xe2\x80\x99:\n'}
+[16.870617] (mavsdk_bridge) StderrLine: {'line': b'\x1b[01m\x1b[K/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/src/precision_landing_transmitter.cpp:164:25:\x1b[m\x1b[K \x1b[01;35m\x1b[Kwarning: \x1b[m\x1b[Kvariable \xe2\x80\x98\x1b[01m\x1b[Kpose\x1b[m\x1b[K\xe2\x80\x99 set but not used [\x1b[01;35m\x1b[K-Wunused-but-set-variable\x1b[m\x1b[K]\n'}
+[16.870679] (mavsdk_bridge) StderrLine: {'line': b'  164 |     Telemetry::Position \x1b[01;35m\x1b[Kpose\x1b[m\x1b[K = Telemetry::Position();\n'}
+[16.870738] (mavsdk_bridge) StderrLine: {'line': b'      |                         \x1b[01;35m\x1b[K^~~~\x1b[m\x1b[K\n'}
+[16.870803] (mavsdk_bridge) StderrLine: {'line': b'\x1b[01m\x1b[K/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/src/precision_landing_transmitter.cpp:\x1b[m\x1b[K In lambda function:\n'}
+[16.870868] (mavsdk_bridge) StderrLine: {'line': b'\x1b[01m\x1b[K/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/src/precision_landing_transmitter.cpp:633:91:\x1b[m\x1b[K \x1b[01;35m\x1b[Kwarning: \x1b[m\x1b[Kunused parameter \xe2\x80\x98\x1b[01m\x1b[Kmavlink_address\x1b[m\x1b[K\xe2\x80\x99 [\x1b[01;35m\x1b[K-Wunused-parameter\x1b[m\x1b[K]\n'}
+[16.870934] (mavsdk_bridge) StderrLine: {'line': b'  633 |             auto send_landing_target_message = [this, &landing_target_msg](\x1b[01;35m\x1b[KMavlinkAddress mavlink_address\x1b[m\x1b[K, uint8_t channel)\n'}
+[16.870996] (mavsdk_bridge) StderrLine: {'line': b'      |                                                                            \x1b[01;35m\x1b[K~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[16.871056] (mavsdk_bridge) StderrLine: {'line': b'\x1b[01m\x1b[K/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/src/precision_landing_transmitter.cpp:\x1b[m\x1b[K In member function \xe2\x80\x98\x1b[01m\x1b[Kuint8_t MavsdkBridgeNode::try_land(std::vector<float>)\x1b[m\x1b[K\xe2\x80\x99:\n'}
+[16.871120] (mavsdk_bridge) StderrLine: {'line': b'\x1b[01m\x1b[K/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/src/precision_landing_transmitter.cpp:649:45:\x1b[m\x1b[K \x1b[01;35m\x1b[Kwarning: \x1b[m\x1b[Kunused parameter \xe2\x80\x98\x1b[01m\x1b[Kdata\x1b[m\x1b[K\xe2\x80\x99 [\x1b[01;35m\x1b[K-Wunused-parameter\x1b[m\x1b[K]\n'}
+[16.871179] (mavsdk_bridge) StderrLine: {'line': b'  649 |         uint8_t try_land(\x1b[01;35m\x1b[Kstd::vector<float> data\x1b[m\x1b[K)\n'}
+[16.871235] (mavsdk_bridge) StderrLine: {'line': b'      |                          \x1b[01;35m\x1b[K~~~~~~~~~~~~~~~~~~~^~~~\x1b[m\x1b[K\n'}
+[16.871293] (mavsdk_bridge) StderrLine: {'line': b'\x1b[01m\x1b[K/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/src/precision_landing_transmitter.cpp:\x1b[m\x1b[K In member function \xe2\x80\x98\x1b[01m\x1b[Kvoid MavsdkBridgeNode::try_move(std::vector<float>)\x1b[m\x1b[K\xe2\x80\x99:\n'}
+[16.871353] (mavsdk_bridge) StderrLine: {'line': b'\x1b[01m\x1b[K/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/src/precision_landing_transmitter.cpp:680:34:\x1b[m\x1b[K \x1b[01;35m\x1b[Kwarning: \x1b[m\x1b[Kunused variable \xe2\x80\x98\x1b[01m\x1b[Kstart_yaw\x1b[m\x1b[K\xe2\x80\x99 [\x1b[01;35m\x1b[K-Wunused-variable\x1b[m\x1b[K]\n'}
+[16.871411] (mavsdk_bridge) StderrLine: {'line': b'  680 |             float altitude, yaw, \x1b[01;35m\x1b[Kstart_yaw\x1b[m\x1b[K;\n'}
+[16.871469] (mavsdk_bridge) StderrLine: {'line': b'      |                                  \x1b[01;35m\x1b[K^~~~~~~~~\x1b[m\x1b[K\n'}
+[16.871524] (mavsdk_bridge) StderrLine: {'line': b'\x1b[01m\x1b[K/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/src/precision_landing_transmitter.cpp:\x1b[m\x1b[K In member function \xe2\x80\x98\x1b[01m\x1b[Kuint8_t MavsdkBridgeNode::try_takeoff(std::vector<float>)\x1b[m\x1b[K\xe2\x80\x99:\n'}
+[16.871581] (mavsdk_bridge) StderrLine: {'line': b'\x1b[01m\x1b[K/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/src/precision_landing_transmitter.cpp:769:30:\x1b[m\x1b[K \x1b[01;35m\x1b[Kwarning: \x1b[m\x1b[Kunused variable \xe2\x80\x98\x1b[01m\x1b[Kseq\x1b[m\x1b[K\xe2\x80\x99 [\x1b[01;35m\x1b[K-Wunused-variable\x1b[m\x1b[K]\n'}
+[16.871639] (mavsdk_bridge) StderrLine: {'line': b'  769 |                     uint16_t \x1b[01;35m\x1b[Kseq\x1b[m\x1b[K = 0;\n'}
+[16.871706] (mavsdk_bridge) StderrLine: {'line': b'      |                              \x1b[01;35m\x1b[K^~~\x1b[m\x1b[K\n'}
+[16.871764] (mavsdk_bridge) StderrLine: {'line': b'\x1b[01m\x1b[K/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/src/precision_landing_transmitter.cpp:\x1b[m\x1b[K In lambda function:\n'}
+[16.871824] (mavsdk_bridge) StderrLine: {'line': b'\x1b[01m\x1b[K/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/src/precision_landing_transmitter.cpp:855:76:\x1b[m\x1b[K \x1b[01;35m\x1b[Kwarning: \x1b[m\x1b[Kunused parameter \xe2\x80\x98\x1b[01m\x1b[Kmavlink_address\x1b[m\x1b[K\xe2\x80\x99 [\x1b[01;35m\x1b[K-Wunused-parameter\x1b[m\x1b[K]\n'}
+[16.871901] (mavsdk_bridge) StderrLine: {'line': b'  855 |             auto send_landing_target_message = [this, &cmd](\x1b[01;35m\x1b[KMavlinkAddress mavlink_address\x1b[m\x1b[K, uint8_t channel) {\n'}
+[16.871967] (mavsdk_bridge) StderrLine: {'line': b'      |                                                             \x1b[01;35m\x1b[K~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[16.886553] (mavsdk_bridge) StdoutLine: {'line': b'[100%] \x1b[32m\x1b[1mLinking CXX executable precision_landing_transmitter\x1b[0m\n'}
+[16.953472] (-) TimerEvent: {}
+[17.053930] (-) TimerEvent: {}
+[17.154363] (-) TimerEvent: {}
+[17.254781] (-) TimerEvent: {}
+[17.355434] (-) TimerEvent: {}
+[17.455803] (-) TimerEvent: {}
+[17.556412] (-) TimerEvent: {}
+[17.656753] (-) TimerEvent: {}
+[17.757067] (-) TimerEvent: {}
+[17.841919] (mavsdk_bridge) StdoutLine: {'line': b'[100%] Built target precision_landing_transmitter\n'}
+[17.854265] (mavsdk_bridge) CommandEnded: {'returncode': 0}
+[17.857154] (-) TimerEvent: {}
+[17.924975] (mavsdk_bridge) JobProgress: {'identifier': 'mavsdk_bridge', 'progress': 'install'}
+[17.933772] (mavsdk_bridge) Command: {'cmd': ['/usr/bin/cmake', '--install', '/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/build/mavsdk_bridge'], 'cwd': '/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/build/mavsdk_bridge', 'env': OrderedDict([('GZ_SIM_SYSTEM_PLUGIN_PATH', '/home/leev/gz_ws/src/ardupilot_gazebo/build:'), ('LESSOPEN', '| /usr/bin/lesspipe %s'), ('GZ_SIM_RESOURCE_PATH', '/home/leev/workspaces/privyaznik_ws/src/ardupilot_custom_launches/worlds:/home/leev/workspaces/privyaznik_ws/src/ardupilot_custom_launches/model:/home/leev/gz_ws/src/ardupilot_gazebo/models:/home/leev/gz_ws/src/ardupilot_gazebo/worlds:'), ('USER', 'leev'), ('LC_TIME', 'ru_RU.UTF-8'), ('XDG_SESSION_TYPE', 'x11'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/home/leev/workspaces/privyaznik_ws/install/privyaznik_msgs/lib:/home/leev/workspaces/wheeltec_robot_ros2/install/turn_on_wheeltec_robot/lib:/home/leev/workspaces/wheeltec_robot_ros2/install/serial/lib:/home/leev/workspaces/wheeltec_robot_ros2/install/ls01/lib:/home/leev/workspaces/wheeltec_robot_ros2/install/camera_models/lib:/home/leev/workspaces/wheeltec_robot_ros2/install/astra_camera_msgs/lib:/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/home/leev'), ('OLDPWD', '/home/leev/workspaces/privyaznik_ws'), ('DESKTOP_SESSION', 'ubuntu'), ('ROS_PYTHON_VERSION', '3'), ('GNOME_SHELL_SESSION_MODE', 'ubuntu'), ('GTK_MODULES', 'gail:atk-bridge'), ('LC_MONETARY', 'ru_RU.UTF-8'), ('MANAGERPID', '1881'), ('SYSTEMD_EXEC_PID', '2601'), ('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/run/user/1000/bus'), ('COLORTERM', 'truecolor'), ('TERMINATOR_DBUS_NAME', 'net.tenshu.Terminator23558193cd9818af7fe4d2c2f5bd9d00f'), ('GIO_LAUNCHED_DESKTOP_FILE_PID', '8387'), ('COLCON_PREFIX_PATH', '/home/leev/workspaces/json_test/install:/home/leev/workspaces/wheeltec_robot_ros2/install:/home/leev/workspaces/privyaznik_ws/install'), ('ROS_DISTRO', 'humble'), ('GTK_IM_MODULE', 'ibus'), ('LOGNAME', 'leev'), ('JOURNAL_STREAM', '8:43503'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('XDG_SESSION_CLASS', 'user'), ('USERNAME', 'leev'), ('TERM', 'xterm-256color'), ('GNOME_DESKTOP_SESSION_ID', 'this-is-deprecated'), ('ROS_LOCALHOST_ONLY', '0'), ('WINDOWPATH', '2'), ('PATH', '/home/leev/workspaces/wheeltec_robot_ros2/install/turn_on_wheeltec_robot/bin:/home/leev/workspaces/wheeltec_robot_ros2/install/global_fusion/bin:/home/leev/workspaces/wheeltec_robot_ros2/install/camera_models/bin:/opt/ros/humble/bin:/usr/lib/ccache:/home/leev/ardupilot/Tools/autotest:/opt/gcc-arm-none-eabi-10-2020-q4-major/bin:/home/leev/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin'), ('SESSION_MANAGER', 'local/leev-IdeaPad-Gaming-3-15ARH7:@/tmp/.ICE-unix/2295,unix/leev-IdeaPad-Gaming-3-15ARH7:/tmp/.ICE-unix/2295'), ('INVOCATION_ID', '52ae06d720704034a1395adbc665b435'), ('XDG_MENU_PREFIX', 'gnome-'), ('LC_ADDRESS', 'ru_RU.UTF-8'), ('XDG_RUNTIME_DIR', '/run/user/1000'), ('DISPLAY', ':1'), ('TERMINATOR_DBUS_PATH', '/net/tenshu/Terminator2'), ('LANG', 'en_US.UTF-8'), ('XDG_CURRENT_DESKTOP', 'ubuntu:GNOME'), ('IBUS_DISABLE_SNOOPER', '1'), ('LC_TELEPHONE', 'ru_RU.UTF-8'), ('XMODIFIERS', '@im=ibus'), ('XDG_SESSION_DESKTOP', 'ubuntu'), ('XAUTHORITY', '/run/user/1000/gdm/Xauthority'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('SSH_AGENT_LAUNCHER', 'gnome-keyring'), ('SSH_AUTH_SOCK', '/run/user/1000/keyring/ssh'), ('ROS_DOMAIN_ID', '207'), ('AMENT_PREFIX_PATH', '/home/leev/workspaces/privyaznik_ws/install/mavsdk_bridge:/home/leev/workspaces/privyaznik_ws/install/privyaznik_msgs:/home/leev/workspaces/privyaznik_ws/install/coordinate_conversion_py:/home/leev/workspaces/privyaznik_ws/install/aruco_precision_landing_ardupilot:/home/leev/workspaces/privyaznik_ws/install/ardupilot_custom_launches:/home/leev/workspaces/json_test/install/json_tests:/home/leev/workspaces/wheeltec_robot_ros2/install/wheeltec_robot_rc:/home/leev/workspaces/wheeltec_robot_ros2/install/turn_on_wheeltec_robot:/home/leev/workspaces/wheeltec_robot_ros2/install/turn_on_launches:/home/leev/workspaces/wheeltec_robot_ros2/install/serial:/home/leev/workspaces/wheeltec_robot_ros2/install/robot_models_tf2:/home/leev/workspaces/wheeltec_robot_ros2/install/ls01:/home/leev/workspaces/wheeltec_robot_ros2/install/global_fusion:/home/leev/workspaces/wheeltec_robot_ros2/install/camera_models:/home/leev/workspaces/wheeltec_robot_ros2/install/astra_camera_msgs:/opt/ros/humble'), ('SHELL', '/bin/bash'), ('LC_NAME', 'ru_RU.UTF-8'), ('TERMINATOR_UUID', 'urn:uuid:5d149dba-c026-4b30-a865-9a543c90c49c'), ('QT_ACCESSIBILITY', '1'), ('GDMSESSION', 'ubuntu'), ('LESSCLOSE', '/usr/bin/lesspipe %s %s'), ('LC_MEASUREMENT', 'ru_RU.UTF-8'), ('GPG_AGENT_INFO', '/run/user/1000/gnupg/S.gpg-agent:0:1'), ('LC_IDENTIFICATION', 'ru_RU.UTF-8'), ('QT_IM_MODULE', 'ibus'), ('PWD', '/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/build/mavsdk_bridge'), ('LC_ALL', 'en_US.UTF-8'), ('CUDA_HOME', '/usr/local/cuda-12.2'), ('XDG_CONFIG_DIRS', '/etc/xdg/xdg-ubuntu:/etc/xdg'), ('XDG_DATA_DIRS', '/usr/share/ubuntu:/usr/share/gnome:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop'), ('PYTHONPATH', '/home/leev/workspaces/privyaznik_ws/install/privyaznik_msgs/local/lib/python3.10/dist-packages:/home/leev/workspaces/privyaznik_ws/install/coordinate_conversion_py/lib/python3.10/site-packages:/home/leev/workspaces/privyaznik_ws/install/aruco_precision_landing_ardupilot/lib/python3.10/site-packages:/home/leev/workspaces/privyaznik_ws/install/ardupilot_custom_launches/lib/python3.10/site-packages:/home/leev/workspaces/wheeltec_robot_ros2/install/wheeltec_robot_rc/lib/python3.10/site-packages:/home/leev/workspaces/wheeltec_robot_ros2/install/turn_on_launches/lib/python3.10/site-packages:/home/leev/workspaces/wheeltec_robot_ros2/install/astra_camera_msgs/local/lib/python3.10/dist-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('LC_NUMERIC', 'ru_RU.UTF-8'), ('LC_PAPER', 'ru_RU.UTF-8'), ('COLCON', '1'), ('VTE_VERSION', '6800'), ('CMAKE_PREFIX_PATH', '/home/leev/workspaces/privyaznik_ws/install/mavsdk_bridge:/home/leev/workspaces/privyaznik_ws/install/privyaznik_msgs:/home/leev/workspaces/json_test/install/json_tests:/home/leev/workspaces/wheeltec_robot_ros2/install/turn_on_wheeltec_robot:/home/leev/workspaces/wheeltec_robot_ros2/install/serial:/home/leev/workspaces/wheeltec_robot_ros2/install/robot_models_tf2:/home/leev/workspaces/wheeltec_robot_ros2/install/ls01:/home/leev/workspaces/wheeltec_robot_ros2/install/global_fusion:/home/leev/workspaces/wheeltec_robot_ros2/install/camera_models:/home/leev/workspaces/wheeltec_robot_ros2/install/astra_camera_msgs:/home/leev/workspaces/privyaznik_ws/install/coordinate_conversion_py:/home/leev/workspaces/privyaznik_ws/install/aruco_precision_landing_ardupilot:/home/leev/workspaces/privyaznik_ws/install/ardupilot_custom_launches:/home/leev/workspaces/wheeltec_robot_ros2/install/wheeltec_robot_rc:/home/leev/workspaces/wheeltec_robot_ros2/install/turn_on_launches:/opt/ros/humble')]), 'shell': False}
+[17.941808] (mavsdk_bridge) StdoutLine: {'line': b'-- Install configuration: ""\n'}
+[17.942005] (mavsdk_bridge) StdoutLine: {'line': b'-- Installing: /home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/lib/mavsdk_bridge/precision_landing_transmitter\n'}
+[17.952292] (mavsdk_bridge) StdoutLine: {'line': b'-- Set runtime path of "/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/lib/mavsdk_bridge/precision_landing_transmitter" to ""\n'}
+[17.952498] (mavsdk_bridge) StdoutLine: {'line': b'-- Installing: /home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/lib/mavsdk_bridge/try_move\n'}
+[17.953847] (mavsdk_bridge) StdoutLine: {'line': b'-- Set runtime path of "/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/lib/mavsdk_bridge/try_move" to ""\n'}
+[17.953973] (mavsdk_bridge) StdoutLine: {'line': b'-- Installing: /home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/lib/mavsdk_bridge/try_land\n'}
+[17.955331] (mavsdk_bridge) StdoutLine: {'line': b'-- Set runtime path of "/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/lib/mavsdk_bridge/try_land" to ""\n'}
+[17.955448] (mavsdk_bridge) StdoutLine: {'line': b'-- Installing: /home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/lib/mavsdk_bridge/try_takeoff\n'}
+[17.956799] (mavsdk_bridge) StdoutLine: {'line': b'-- Set runtime path of "/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/lib/mavsdk_bridge/try_takeoff" to ""\n'}
+[17.956911] (mavsdk_bridge) StdoutLine: {'line': b'-- Installing: /home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/lib/mavsdk_bridge/client_commands_land\n'}
+[17.957211] (-) TimerEvent: {}
+[17.958053] (mavsdk_bridge) StdoutLine: {'line': b'-- Set runtime path of "/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/lib/mavsdk_bridge/client_commands_land" to ""\n'}
+[17.958178] (mavsdk_bridge) StdoutLine: {'line': b'-- Installing: /home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/lib/mavsdk_bridge/client_commands_takeoff\n'}
+[17.959044] (mavsdk_bridge) StdoutLine: {'line': b'-- Set runtime path of "/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/lib/mavsdk_bridge/client_commands_takeoff" to ""\n'}
+[17.959180] (mavsdk_bridge) StdoutLine: {'line': b'-- Installing: /home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/lib/mavsdk_bridge/action_client\n'}
+[17.960363] (mavsdk_bridge) StdoutLine: {'line': b'-- Set runtime path of "/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/lib/mavsdk_bridge/action_client" to ""\n'}
+[17.960523] (mavsdk_bridge) StdoutLine: {'line': b'-- Installing: /home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/lib/mavsdk_bridge/action_service\n'}
+[17.961604] (mavsdk_bridge) StdoutLine: {'line': b'-- Set runtime path of "/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/lib/mavsdk_bridge/action_service" to ""\n'}
+[17.961748] (mavsdk_bridge) StdoutLine: {'line': b'-- Installing: /home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/lib/mavsdk_bridge/action_client_land\n'}
+[17.962891] (mavsdk_bridge) StdoutLine: {'line': b'-- Set runtime path of "/home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/lib/mavsdk_bridge/action_client_land" to ""\n'}
+[17.963083] (mavsdk_bridge) StdoutLine: {'line': b'-- Installing: /home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/share/ament_index/resource_index/package_run_dependencies/mavsdk_bridge\n'}
+[17.963362] (mavsdk_bridge) StdoutLine: {'line': b'-- Installing: /home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/share/ament_index/resource_index/parent_prefix_path/mavsdk_bridge\n'}
+[17.963577] (mavsdk_bridge) StdoutLine: {'line': b'-- Installing: /home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/share/mavsdk_bridge/environment/ament_prefix_path.sh\n'}
+[17.963762] (mavsdk_bridge) StdoutLine: {'line': b'-- Installing: /home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/share/mavsdk_bridge/environment/ament_prefix_path.dsv\n'}
+[17.963903] (mavsdk_bridge) StdoutLine: {'line': b'-- Installing: /home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/share/mavsdk_bridge/environment/path.sh\n'}
+[17.964025] (mavsdk_bridge) StdoutLine: {'line': b'-- Installing: /home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/share/mavsdk_bridge/environment/path.dsv\n'}
+[17.964146] (mavsdk_bridge) StdoutLine: {'line': b'-- Installing: /home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/share/mavsdk_bridge/local_setup.bash\n'}
+[17.964307] (mavsdk_bridge) StdoutLine: {'line': b'-- Installing: /home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/share/mavsdk_bridge/local_setup.sh\n'}
+[17.964453] (mavsdk_bridge) StdoutLine: {'line': b'-- Installing: /home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/share/mavsdk_bridge/local_setup.zsh\n'}
+[17.964601] (mavsdk_bridge) StdoutLine: {'line': b'-- Installing: /home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/share/mavsdk_bridge/local_setup.dsv\n'}
+[17.964755] (mavsdk_bridge) StdoutLine: {'line': b'-- Installing: /home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/share/mavsdk_bridge/package.dsv\n'}
+[17.964958] (mavsdk_bridge) StdoutLine: {'line': b'-- Installing: /home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/share/ament_index/resource_index/packages/mavsdk_bridge\n'}
+[17.965132] (mavsdk_bridge) StdoutLine: {'line': b'-- Installing: /home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/share/mavsdk_bridge/cmake/mavsdk_bridgeConfig.cmake\n'}
+[17.965263] (mavsdk_bridge) StdoutLine: {'line': b'-- Installing: /home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/share/mavsdk_bridge/cmake/mavsdk_bridgeConfig-version.cmake\n'}
+[17.965407] (mavsdk_bridge) StdoutLine: {'line': b'-- Installing: /home/leev/workspaces/privyaznik_ws/src/mavsdk_bridge/install/mavsdk_bridge/share/mavsdk_bridge/package.xml\n'}
+[17.967306] (mavsdk_bridge) CommandEnded: {'returncode': 0}
+[18.041758] (mavsdk_bridge) JobEnded: {'identifier': 'mavsdk_bridge', 'rc': 0}
+[18.042316] (-) EventReactorShutdown: {}
