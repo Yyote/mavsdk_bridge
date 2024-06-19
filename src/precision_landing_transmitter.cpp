@@ -761,7 +761,7 @@ class MavsdkBridgeNode : public rclcpp::Node
                     res->result = try_takeoff(data);
                     break;
                 case privyaznik_msgs::action::Command::Goal::CMD_MOVE:
-                    res->result = try_move(data);
+                    //res->result = try_move(data);
                     break;
                 default:
                     RCLCPP_ERROR_STREAM(this->get_logger(), "mavsdk_bridge: unknown command.");
