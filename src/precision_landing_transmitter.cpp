@@ -940,7 +940,7 @@ class MavsdkBridgeNode : public rclcpp::Node
             
             RCLCPP_INFO_STREAM(this->get_logger(), "Goal: " << res);
             // res = (res + current_heading) * M_PI / 180 ;
-            // res = (res + current_heading);
+            res = (res + current_heading);
 
             privyaznik_msgs::srv::UtmToWgs::Request u_req;
             u_req.easting = easting + response->easting;
@@ -952,7 +952,7 @@ class MavsdkBridgeNode : public rclcpp::Node
             while (utm_to_wgs_response_future->wait_for(50ms) != std::future_status::ready) RCLCPP_WARN_STREAM(this->get_logger(), "Try move converting UTM to WGS. Waiting...");
             std::shared_ptr<privyaznik_msgs::srv::UtmToWgs_Response> goal = utm_to_wgs_response_future->get();
 
-            mavsdk::Action::Result result = action->goto_location(goal->latitude, goal->longitude, altitude, res);
+            mavsdk::Action::Result result = action->goto_location(goal->latitude + 0.001, goal->longitude, altitude, res);
             if (result != mavsdk::Action::Result::Success) 
             {
                 RCLCPP_ERROR_STREAM(this->get_logger(), "Move failed");
