@@ -660,16 +660,6 @@ class MavsdkBridgeNode : public rclcpp::Node
             else 
             {
                 std::string default_zmq_connect_address = "tcp://127.0.0.1:8080";
-                // RCLCPP_ERROR_STREAM(this->get_logger(), "DEFAULT ZMQ IP");
-                // RCLCPP_ERROR_STREAM(this->get_logger(), "DEFAULT ZMQ IP");
-                // RCLCPP_ERROR_STREAM(this->get_logger(), "DEFAULT ZMQ IP");
-                // RCLCPP_ERROR_STREAM(this->get_logger(), "DEFAULT ZMQ IP");
-                // RCLCPP_ERROR_STREAM(this->get_logger(), "DEFAULT ZMQ IP");
-                // RCLCPP_ERROR_STREAM(this->get_logger(), "DEFAULT ZMQ IP");
-                // RCLCPP_ERROR_STREAM(this->get_logger(), "DEFAULT ZMQ IP");
-                // RCLCPP_ERROR_STREAM(this->get_logger(), "DEFAULT ZMQ IP");
-                // RCLCPP_ERROR_STREAM(this->get_logger(), "DEFAULT ZMQ IP");
-                // RCLCPP_ERROR_STREAM(this->get_logger(), "DEFAULT ZMQ IP");
                 socket.bind(default_zmq_connect_address);
             }
 
@@ -1098,9 +1088,9 @@ class MavsdkBridgeNode : public rclcpp::Node
                         const mavsdk::Action::Result rtl_result = action->return_to_launch();
                         if (rtl_result != mavsdk::Action::Result::Success) {
                             std::cout << "Failed to command RTL: " << rtl_result << '\n';
+                            mission->unsubscribe_mission_progress(ms_handle);
                             return privyaznik_msgs::action::Command::Result::RES_FAILED;
                         }
-                        mission->unsubscribe_mission_progress(ms_handle);
                     }    
 
                     while (not mission_complete)
