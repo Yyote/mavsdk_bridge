@@ -317,8 +317,8 @@ class CommandActionClient : public rclcpp::Node
         {
             cb_group = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant); 
             sub_options.callback_group = cb_group;
-            cmd_string_sub = this->create_subscription<std_msgs::msg::String>("npu/commands", rclcpp::QoS(rclcpp::KeepLast(10)).best_effort().durability_volatile(), std::bind(&CommandActionClient::commands_from_npu_callback, this, _1), sub_options);
-            cmd_string_pub = this->create_publisher<std_msgs::msg::String>("npu/copter_feedback", 10);
+            cmd_string_sub = this->create_subscription<std_msgs::msg::String>("/npu/commands", rclcpp::QoS(rclcpp::KeepLast(10)).best_effort().durability_volatile(), std::bind(&CommandActionClient::commands_from_npu_callback, this, _1), sub_options);
+            cmd_string_pub = this->create_publisher<std_msgs::msg::String>("/npu/copter_feedback", 10);
             this->client_ptr_ = rclcpp_action::create_client<Command>(
             this->get_node_base_interface(),
             this->get_node_graph_interface(),
@@ -765,8 +765,14 @@ class MavsdkBridgeNode : public rclcpp::Node
                     RCLCPP_ERROR_STREAM(this->get_logger(), "mavsdk_bridge: unknown command.");
                     
             }
-            goal_handle->succeed(res);
-            
+            if (res->result == res->RES_SUCCESS)
+            {
+                goal_handle->succeed(res);
+            } 
+            else if (res->result == res->RES_FAILED)
+            {
+                goal_handle->abort(res);
+            }
         }
 
         void imu_data_callback(const sensor_msgs::msg::Imu::SharedPtr attitude)
