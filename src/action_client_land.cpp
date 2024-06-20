@@ -44,7 +44,7 @@ public:
       this->get_node_graph_interface(),
       this->get_node_logging_interface(),
       this->get_node_waitables_interface(),
-      "command_action");
+      "/wired_uav/command_action");
 
     this->timer_ = this->create_wall_timer(
       std::chrono::milliseconds(500),
