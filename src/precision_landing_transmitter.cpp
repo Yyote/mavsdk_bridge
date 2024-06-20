@@ -52,7 +52,7 @@ using std::this_thread::sleep_for;
 std::string mavlink_addr = "udp://:14550"; // Set | type+address+baud | to connect mavsdk to mavlink
 //const std::string zmq_connect_address = "tcp://192.168.128.174:8080"; // Set TCP address for ZMQ
 // std::string mavlink_addr = "serial:///dev/ttyUSB0:115200"; // Set | type+address+baud | to connect mavsdk to mavlink
-const std::string zmq_connect_address = "tcp://192.168.128.127:8080";
+const std::string zmq_connect_address = "tcp://192.168.2.91:8080";
 
 mavsdk::MissionRaw::MissionItem make_mission_item_wp(
     double latitude_deg, double longitude_deg, float relative_altitude_m,
@@ -581,6 +581,13 @@ class MavsdkBridgeNode : public rclcpp::Node
         MavsdkBridgeNode()
         : Node("minimal_subscriber"), mavsdk{Mavsdk::Configuration{Mavsdk::ComponentType::GroundStation}}
         {
+            std::string default_username = "firefly";
+            std::string username = "firefly";
+            
+            this->declare_parameter("username", default_username);
+            this->get_parameter_or("username", username, default_username);
+
+
             cb_group = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant); 
             sub_options.callback_group = cb_group;
             // sub_options.qos_overriding_options.
@@ -646,7 +653,25 @@ class MavsdkBridgeNode : public rclcpp::Node
             });
 
             create_json();
-            socket.bind(zmq_connect_address);
+            if (username == "firefly")
+            {
+                socket.bind(zmq_connect_address);
+            }
+            else 
+            {
+                std::string default_zmq_connect_address = "tcp://127.0.0.1:8080";
+                // RCLCPP_ERROR_STREAM(this->get_logger(), "DEFAULT ZMQ IP");
+                // RCLCPP_ERROR_STREAM(this->get_logger(), "DEFAULT ZMQ IP");
+                // RCLCPP_ERROR_STREAM(this->get_logger(), "DEFAULT ZMQ IP");
+                // RCLCPP_ERROR_STREAM(this->get_logger(), "DEFAULT ZMQ IP");
+                // RCLCPP_ERROR_STREAM(this->get_logger(), "DEFAULT ZMQ IP");
+                // RCLCPP_ERROR_STREAM(this->get_logger(), "DEFAULT ZMQ IP");
+                // RCLCPP_ERROR_STREAM(this->get_logger(), "DEFAULT ZMQ IP");
+                // RCLCPP_ERROR_STREAM(this->get_logger(), "DEFAULT ZMQ IP");
+                // RCLCPP_ERROR_STREAM(this->get_logger(), "DEFAULT ZMQ IP");
+                // RCLCPP_ERROR_STREAM(this->get_logger(), "DEFAULT ZMQ IP");
+                socket.bind(default_zmq_connect_address);
+            }
 
             telemetry->subscribe_home([this](Telemetry::Position home_in){home_position = home_in;});
 
