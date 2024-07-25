@@ -49,7 +49,7 @@ using std::chrono::seconds;
 using std::this_thread::sleep_for;
 
 // const std::string zmq_connect_address = "tcp://127.0.0.1:8080"; // Set TCP address for ZMQ
-std::string mavlink_addr = "udp://:14550"; // Set | type+address+baud | to connect mavsdk to mavlink
+std::string mavlink_addr = "udp://:14551"; // Set | type+address+baud | to connect mavsdk to mavlink
 //const std::string zmq_connect_address = "tcp://192.168.128.174:8080"; // Set TCP address for ZMQ
 // std::string mavlink_addr = "serial:///dev/ttyUSB0:115200"; // Set | type+address+baud | to connect mavsdk to mavlink
 const std::string zmq_connect_address = "tcp://192.168.2.91:8080";
@@ -592,7 +592,7 @@ class MavsdkBridgeNode : public rclcpp::Node
             sub_options.callback_group = cb_group;
             // sub_options.qos_overriding_options.
             // sub_options.
-            sub_prec_landing = this->create_subscription<geometry_msgs::msg::Vector3>("camera/landing_position", 10, std::bind(&MavsdkBridgeNode::prec_land_callback, this, _1), sub_options);
+            sub_prec_landing = this->create_subscription<geometry_msgs::msg::Vector3>("/camera/landing_position", 10, std::bind(&MavsdkBridgeNode::prec_land_callback, this, _1), sub_options);
             // sub_commands = this->create_subscription<privyaznik_msgs::msg::Command>("commands", 10, std::bind(&MavsdkBridgeNode::commands_callback, this, _1), sub_options);
             sub_imu_data = this->create_subscription<sensor_msgs::msg::Imu>("/mavros/imu/data", rclcpp::QoS(rclcpp::KeepLast(10)).best_effort().durability_volatile(), std::bind(&MavsdkBridgeNode::imu_data_callback, this, _1), sub_options);
             sub_gps1_data = this->create_subscription<mavros_msgs::msg::GPSRAW>("/mavros/gpsstatus/gps1/raw", rclcpp::QoS(rclcpp::KeepLast(10)).best_effort().durability_volatile(), std::bind(&MavsdkBridgeNode::gps_data1_callback, this, _1), sub_options);
@@ -630,7 +630,7 @@ class MavsdkBridgeNode : public rclcpp::Node
                 throw std::exception();
             }
 
-            system = mavsdk.first_autopilot(3.0);
+            system = mavsdk.first_autopilot(10.0);
             while (!system) 
             {
                 std::cerr << "Timed out waiting for system\n";
