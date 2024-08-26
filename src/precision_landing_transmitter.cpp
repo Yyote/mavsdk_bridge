@@ -49,7 +49,7 @@ using std::chrono::seconds;
 using std::this_thread::sleep_for;
 
 // const std::string zmq_connect_address = "tcp://127.0.0.1:8080"; // Set TCP address for ZMQ
-std::string mavlink_addr = "udp://:14550"; // Set | type+address+baud | to connect mavsdk to mavlink
+std::string mavlink_addr = "udp://:14551"; // Set | type+address+baud | to connect mavsdk to mavlink
 //const std::string zmq_connect_address = "tcp://192.168.128.174:8080"; // Set TCP address for ZMQ
 // std::string mavlink_addr = "serial:///dev/ttyUSB0:115200"; // Set | type+address+baud | to connect mavsdk to mavlink
 const std::string zmq_connect_address = "tcp://192.168.2.91:8080";
@@ -630,7 +630,7 @@ class MavsdkBridgeNode : public rclcpp::Node
                 throw std::exception();
             }
 
-            system = mavsdk.first_autopilot(3.0);
+            system = mavsdk.first_autopilot(10.0);
             while (!system) 
             {
                 std::cerr << "Timed out waiting for system\n";
