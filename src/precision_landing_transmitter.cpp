@@ -1012,7 +1012,7 @@ class MavsdkBridgeNode : public rclcpp::Node
                 return privyaznik_msgs::action::Command::Result::RES_FAILED;
             }
 
-            set_home_position_to_current_position();
+            // set_home_position_to_current_position();
 
             
             float z_coor;
