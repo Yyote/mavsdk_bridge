@@ -17,14 +17,16 @@ find_package(privyaznik_msgs REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
+find_package(euler_angles_lib REQUIRED)
+find_package(pid_regulator_lib REQUIRED)
 
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
 add_executable(precision_landing_transmitter src/precision_landing_transmitter.cpp)
-target_link_libraries(precision_landing_transmitter MAVSDK::mavsdk zmq)
-ament_target_dependencies(precision_landing_transmitter rclcpp geometry_msgs std_msgs sensor_msgs tf2_geometry_msgs mavros_msgs privyaznik_msgs tf2 rclcpp_action)
+target_link_libraries(precision_landing_transmitter MAVSDK::mavsdk zmq pid_regulator_lib::pid_regulator_lib)
+ament_target_dependencies(precision_landing_transmitter  rclcpp geometry_msgs std_msgs sensor_msgs tf2_geometry_msgs mavros_msgs privyaznik_msgs tf2 rclcpp_action)
 
 add_executable(json_cmd_client src/json_cmd_client.cpp)
 target_link_libraries(json_cmd_client MAVSDK::mavsdk zmq)
@@ -101,5 +103,21 @@ install(TARGETS
   action_client_move
   DESTINATION lib/${PROJECT_NAME}
 )
+
+
+install(
+    TARGETS precision_landing_transmitter
+    EXPORT precision_landing_transmitter
+    LIBRARY DESTINATION ${COLCON_PACKAGE_LIB_DESTINATION}
+    ARCHIVE DESTINATION ${COLCON_GLOBAL_LIB_DESTINATION}
+    RUNTIME DESTINATION  ${COLCON_GLOBAL_LIB_DESTINATION}
+    INCLUDES DESTINATION include
+)
+
+install(TARGETS precision_landing_transmitter
+DESTINATION lib/${PROJECT_NAME}/)
+
+ament_export_targets(precision_landing_transmitter HAS_LIBRARY_TARGET)
+
 
 ament_package()

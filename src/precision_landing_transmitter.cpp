@@ -15,6 +15,7 @@
 #include "geometry_msgs/msg/vector3.hpp"
 #include "geometry_msgs/msg/quaternion.hpp"
 #include "sensor_msgs/msg/imu.hpp"
+#include "sensor_msgs/msg/laser_scan.hpp"
 #include "mavros_msgs/msg/gpsraw.hpp"
 #include "privyaznik_msgs/msg/command.hpp"
 #include "privyaznik_msgs/srv/utm_to_wgs.hpp"
@@ -31,15 +32,19 @@
 #include <mavsdk/mavsdk.h>
 #include <mavsdk/plugins/param/param.h>
 #include <mavsdk/plugins/mavlink_passthrough/mavlink_passthrough.h>
+#include <mavsdk/plugins/offboard/offboard.h>
 #include <mavsdk/plugins/action/action.h>
 #include <mavsdk/plugins/telemetry/telemetry.h>
 #include <mavsdk/mavlink/common/mavlink.h>
 
 #include "rclcpp_action/rclcpp_action.hpp"
 
+#include "pid_regulator_lib/regulators.hpp"
+
+
 using GoalHandlePrivyaznik = rclcpp_action::ServerGoalHandle<privyaznik_msgs::action::Command>;
-using mavsdk::MavlinkPassthrough, mavsdk::Mavsdk, mavsdk::ConnectionResult, mavsdk::Param, mavsdk::Telemetry;
-using mavsdk::MavlinkPassthrough, mavsdk::Mavsdk, mavsdk::ConnectionResult, mavsdk::Param, mavsdk::Telemetry, mavsdk::Action;
+// using mavsdk::MavlinkPassthrough, mavsdk::Mavsdk, mavsdk::ConnectionResult, mavsdk::Param, mavsdk::Telemetry;
+using mavsdk::MavlinkPassthrough, mavsdk::Mavsdk, mavsdk::ConnectionResult, mavsdk::Param, mavsdk::Telemetry, mavsdk::Action, mavsdk::MissionRaw;
 using json = nlohmann::json;
 
 using namespace std::chrono_literals;
@@ -49,51 +54,51 @@ using std::chrono::seconds;
 using std::this_thread::sleep_for;
 
 // const std::string zmq_connect_address = "tcp://127.0.0.1:8080"; // Set TCP address for ZMQ
-std::string mavlink_addr = "udp://:14550"; // Set | type+address+baud | to connect mavsdk to mavlink
+std::string mavlink_addr = "udp://:14551"; // Set | type+address+baud | to connect mavsdk to mavlink
 //const std::string zmq_connect_address = "tcp://192.168.128.174:8080"; // Set TCP address for ZMQ
 // std::string mavlink_addr = "serial:///dev/ttyUSB0:115200"; // Set | type+address+baud | to connect mavsdk to mavlink
 const std::string zmq_connect_address = "tcp://192.168.2.91:8080";
 
-mavsdk::MissionRaw::MissionItem make_mission_item_wp(
-    double latitude_deg, double longitude_deg, float relative_altitude_m,
-    float speed_m_s, bool is_fly_through, uint16_t &seq, bool is_current)
-{
-    mavsdk::MissionRaw::MissionItem new_item{};
-    new_item.mission_type = MAV_MISSION_TYPE_MISSION;
-    new_item.command = MAV_CMD_NAV_WAYPOINT;
-    new_item.param1 = 0; 
-    new_item.param2 = 1;
-    new_item.param3 = 0;
-    new_item.param4 = 0;
-    new_item.x = int32_t(std::round(latitude_deg * 1e7));
-    new_item.y = int32_t(std::round(longitude_deg * 1e7));
-    new_item.z = relative_altitude_m;
-    new_item.frame = MAV_FRAME_GLOBAL_RELATIVE_ALT;
-    new_item.autocontinue = 1;
-    new_item.seq = seq;
-    seq++;
-    new_item.current = static_cast<uint32_t>(is_current);
-    return new_item;
-}
+// mavsdk::MissionRaw::MissionItem make_mission_item_wp(
+//     double latitude_deg, double longitude_deg, float relative_altitude_m,
+//     float speed_m_s, bool is_fly_through, uint16_t &seq, bool is_current)
+// {
+//     mavsdk::MissionRaw::MissionItem new_item{};
+//     new_item.mission_type = MAV_MISSION_TYPE_MISSION;
+//     new_item.command = MAV_CMD_NAV_WAYPOINT;
+//     new_item.param1 = 0; 
+//     new_item.param2 = 1;
+//     new_item.param3 = 0;
+//     new_item.param4 = 0;
+//     new_item.x = int32_t(std::round(latitude_deg * 1e7));
+//     new_item.y = int32_t(std::round(longitude_deg * 1e7));
+//     new_item.z = relative_altitude_m;
+//     new_item.frame = MAV_FRAME_GLOBAL_RELATIVE_ALT;
+//     new_item.autocontinue = 1;
+//     new_item.seq = seq;
+//     seq++;
+//     new_item.current = static_cast<uint32_t>(is_current);
+//     return new_item;
+// }
 
 
 /**
- * @param _seq
- * @param _frame
- * @param _command
- * @param _current
- * @param _autocontinue
- * @param _param1
- * @param _param2
- * @param _param3
- * @param _param4
- * @param _x
- * @param _y
- * @param _z
- * @param _mission_type
+ * @param _seq начинается с нуля и возрастает на единицу с каждым последующим mission_item
+ * @param _frame MAV_FRAME_*
+ * @param _command MAV_CMD_*, (MAV_CMD_NAV_WAYPOINT)
+ * @param _current является ли точка текущей задачей. 1 - является, 0 - нет 
+ * @param _autocontinue продолжать ли миссию после данной точки? установите 0, чтобы поставить миссию на паузу после выполнения данной точки
+ * @param _param1 смотрите MAV_CMD enum соответствующей команды
+ * @param _param2 смотрите MAV_CMD enum соответствующей команды
+ * @param _param3 смотрите MAV_CMD enum соответствующей команды
+ * @param _param4 смотрите MAV_CMD enum соответствующей команды
+ * @param _x широта в градусах (или в соответствии с _frame - https://mavlink.io/en/messages/common.html#MISSION_ITEM_INT)
+ * @param _y долгота в градусах (или в соответствии с _frame - https://mavlink.io/en/messages/common.html#MISSION_ITEM_INT)
+ * @param _z относительная высота в метрах (или в соответствии с _frame - https://mavlink.io/en/messages/common.html#MISSION_ITEM_INT)
+ * @param _mission_type MAV_MISSION_TYPE
  * 
 */
-mavsdk::MissionRaw::MissionItem create_mission_item(uint32_t _seq, uint32_t _frame, uint32_t _command, uint32_t _current, uint32_t _autocontinue,
+mavsdk::MissionRaw::MissionItem create_ardupilot_mission_item(uint16_t _seq, uint8_t _frame, uint16_t _command, uint8_t _current, uint8_t _autocontinue,
                                             float _param1, float _param2, float _param3, float _param4, 
                                             float _x, float _y, float _z, 
                                             uint32_t _mission_type)
@@ -124,17 +129,17 @@ std::vector<mavsdk::MissionRaw::MissionItem> create_mission_raw(float home_alt)
     std::cout << "home_position.absolute_altitude_m: " << home_alt << std::endl;
 
    
-    mission_raw_items.push_back(create_mission_item(0, 0, 16, 1, 1, 0, 0, 0, 0, 47.397742, 8.545594, home_alt, 0));
+    mission_raw_items.push_back(create_ardupilot_mission_item(0, 0, 16, 1, 1, 0, 0, 0, 0, 47.397742, 8.545594, home_alt, 0));
 
     // Add Takeoff
-    mission_raw_items.push_back(create_mission_item(1, 3, 22, 0, 1, 0, 0, 0, 0, 0, 0, 30, 0));
+    mission_raw_items.push_back(create_ardupilot_mission_item(1, 3, 22, 0, 1, 0, 0, 0, 0, 0, 0, 30, 0));
 
     // Add Mission Item 2-3
-    mission_raw_items.push_back(create_mission_item(2, 3, 16, 0, 1, 0, 0, 0, 0, -36.3634, 149.164, 30, 0));
-    //mission_raw_items.push_back(create_mission_item(3, 3, 16, 0, 1, 0, 0, 0, 0, -35.3635, 149.165, 30, 0));
+    mission_raw_items.push_back(create_ardupilot_mission_item(2, 3, 16, 0, 1, 0, 0, 0, 0, -36.3634, 149.164, 30, 0));
+    //mission_raw_items.push_back(create_ardupilot_mission_item(3, 3, 16, 0, 1, 0, 0, 0, 0, -35.3635, 149.165, 30, 0));
 
     // Return to Launch
-    //mission_raw_items.push_back(create_mission_item(4, 3, 20, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0));
+    //mission_raw_items.push_back(create_ardupilot_mission_item(4, 3, 20, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0));
     return mission_raw_items;
 }
 
@@ -241,48 +246,64 @@ json telemetry_data;
 zmq::context_t ctx{1};
 zmq::socket_t socket{ctx, zmq::socket_type::pub};
 
+
+double make_negative(double num)
+{
+    if (num >= 0) return -num;
+    else return num;
+}
+
+double make_positive(double num)
+{
+    if (num < 0) return -num;
+    else return num;
+}
+
+
+
 void isok(int num) 
 {
     std::cout << "All is ok ---> " << num << "\n";
 }
 
-void error_msg (mavsdk::MavlinkPassthrough::Result result) 
+
+void error_msg (mavsdk::MavlinkPassthrough::Result result, std::string message="") 
 {
     switch (result) 
     {
         case mavsdk::MavlinkPassthrough::Result::Success:
-            std::cout << "Landing target message queued successfully." << std::endl;
+            std::cout << message << ": message queued successfully." << std::endl;
             break;
         case mavsdk::MavlinkPassthrough::Result::Unknown:
-            std::cerr << "An unknown error occurred while sending the message." << std::endl;
+            std::cerr << message << ": An unknown error occurred while sending the message." << std::endl;
             break;
         case mavsdk::MavlinkPassthrough::Result::ConnectionError:
-            std::cerr << "Error connecting to the autopilot. Check the connection and try again." << std::endl;
+            std::cerr << message << ": Error connecting to the autopilot. Check the connection and try again." << std::endl;
             break;
         case mavsdk::MavlinkPassthrough::Result::CommandNoSystem:
-            std::cerr << "Mavlink system not available." << std::endl;
+            std::cerr << message << ": Mavlink system not available." << std::endl;
             break;
         case mavsdk::MavlinkPassthrough::Result::CommandBusy:
-            std::cout << "System is busy. Please try again later." << std::endl;
+            std::cout << message << ": System is busy. Please try again later." << std::endl;
             break;
         case mavsdk::MavlinkPassthrough::Result::CommandDenied:
-            std::cerr << "Command to send landing target message has been denied." << std::endl;
+            std::cerr << message << ": Command to send message has been denied." << std::endl;
             break;
         case mavsdk::MavlinkPassthrough::Result::CommandUnsupported:
-            std::cerr << "Sending landing target message is not supported by this autopilot." << std::endl;
+            std::cerr << message << ": Sending message is not supported by this autopilot." << std::endl;
             break;
         case mavsdk::MavlinkPassthrough::Result::CommandTimeout:
-            std::cerr << "Timeout while sending the landing target message. Check connection and retry." << std::endl;
+            std::cerr << message << ": Timeout while sending the message. Check connection and retry." << std::endl;
             break;
         case mavsdk::MavlinkPassthrough::Result::CommandTemporarilyRejected:
-            std::cout << "Sending landing target message temporarily rejected. Try again later." << std::endl;
+            std::cout << message << ": Sending message temporarily rejected. Try again later." << std::endl;
             break;
         case mavsdk::MavlinkPassthrough::Result::CommandFailed:
-            std::cerr << "Failed to send the landing target message." << std::endl;
+            std::cerr << message << ": Failed to send the message." << std::endl;
             break;
         // Add cases for other specific error handling if needed...
         default:
-            std::cerr << "Unhandled Mavlink passthrough result: " << static_cast<int>(result) << std::endl;
+            std::cerr << message << ": Unhandled Mavlink passthrough result: " << static_cast<int>(result) << std::endl;
     }
 }
 
@@ -588,15 +609,66 @@ class MavsdkBridgeNode : public rclcpp::Node
             this->get_parameter_or("username", username, default_username);
 
 
+            start_time_ms = this->get_clock()->now().seconds() * 1000.0 + this->get_clock()->now().nanoseconds() / 1000.0;
+
+            // Get Prec land parameters
+            float default_PLD_MARKER_TIMEOUT_S = 5.0;
+            this->declare_parameter("pld_marker_timeout_s", default_PLD_MARKER_TIMEOUT_S);
+            this->get_parameter_or("pld_marker_timeout_s", PLD_MARKER_TIMEOUT_S, default_PLD_MARKER_TIMEOUT_S);
+
+            float default_PLD_ACC_RADIUS_DEG = 10.0;
+            this->declare_parameter("pld_acc_radius_deg", default_PLD_ACC_RADIUS_DEG);
+            this->get_parameter_or("pld_acc_radius_deg", PLD_ACC_RADIUS_DEG, default_PLD_ACC_RADIUS_DEG);
+
+            float default_PLD_SRCH_TIMEOUT = 30.0;
+            this->declare_parameter("pld_srch_timeout", default_PLD_SRCH_TIMEOUT);
+            this->get_parameter_or("pld_srch_timeout", PLD_SRCH_TIMEOUT, default_PLD_SRCH_TIMEOUT);
+
+            float default_PLD_SRCH_ALT = 5.0;
+            this->declare_parameter("pld_srch_alt", default_PLD_SRCH_ALT);
+            this->get_parameter_or("pld_srch_alt", PLD_SRCH_ALT, default_PLD_SRCH_ALT);
+
+            float default_PLD_FIN_APPR_ALT = 0.2;
+            this->declare_parameter("pld_fin_appr_alt", default_PLD_FIN_APPR_ALT);
+            this->get_parameter_or("pld_fin_appr_alt", PLD_FIN_APPR_ALT, default_PLD_FIN_APPR_ALT);
+
+            float default_PLD_KP = 5.0;
+            this->declare_parameter("pld_kp", default_PLD_KP);
+            this->get_parameter_or("pld_kp", PLD_KP, default_PLD_KP);
+
+            float default_PLD_KI = 0.0;
+            this->declare_parameter("pld_ki", default_PLD_KI);
+            this->get_parameter_or("pld_ki", PLD_KI, default_PLD_KI);
+
+            float default_PLD_KD = 0.0;
+            this->declare_parameter("pld_kd", default_PLD_KD);
+            this->get_parameter_or("pld_kd", PLD_KD, default_PLD_KD);
+
+            float default_PLD_MAX_SPD = 0.0;
+            this->declare_parameter("pld_max_spd", default_PLD_MAX_SPD);
+            this->get_parameter_or("pld_max_spd", PLD_MAX_SPD, default_PLD_MAX_SPD);
+
+            float default_PLD_MAX_ALT_SPD = 0.5;
+            this->declare_parameter("pld_max_alt_spd", default_PLD_MAX_ALT_SPD);
+            this->get_parameter_or("pld_max_alt_spd", PLD_MAX_ALT_SPD, default_PLD_MAX_ALT_SPD);
+
+            float default_PLD_MIN_ALT_SPD = 0.2;
+            this->declare_parameter("pld_min_alt_spd", default_PLD_MIN_ALT_SPD);
+            this->get_parameter_or("pld_min_alt_spd", PLD_MIN_ALT_SPD, default_PLD_MIN_ALT_SPD);
+
             cb_group = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant); 
             sub_options.callback_group = cb_group;
-            // sub_options.qos_overriding_options.
-            // sub_options.
+
+            /**
+             * In PX4 prec landing requires the Local NED position of the marker. So I will try to use Local NED position of the
+             * drone and distance sensor to estimate marker position.
+             */
             sub_prec_landing = this->create_subscription<geometry_msgs::msg::Vector3>("camera/landing_position", 10, std::bind(&MavsdkBridgeNode::prec_land_callback, this, _1), sub_options);
+            sub_rangefinder = this->create_subscription<sensor_msgs::msg::LaserScan>("rangefinder", 10, std::bind(&MavsdkBridgeNode::rangefinder_callback, this, _1), sub_options);
             // sub_commands = this->create_subscription<privyaznik_msgs::msg::Command>("commands", 10, std::bind(&MavsdkBridgeNode::commands_callback, this, _1), sub_options);
-            sub_imu_data = this->create_subscription<sensor_msgs::msg::Imu>("/mavros/imu/data", rclcpp::QoS(rclcpp::KeepLast(10)).best_effort().durability_volatile(), std::bind(&MavsdkBridgeNode::imu_data_callback, this, _1), sub_options);
-            sub_gps1_data = this->create_subscription<mavros_msgs::msg::GPSRAW>("/mavros/gpsstatus/gps1/raw", rclcpp::QoS(rclcpp::KeepLast(10)).best_effort().durability_volatile(), std::bind(&MavsdkBridgeNode::gps_data1_callback, this, _1), sub_options);
-            sub_gps2_data = this->create_subscription<mavros_msgs::msg::GPSRAW>("/mavros/gpsstatus/gps2/raw", rclcpp::QoS(rclcpp::KeepLast(10)).best_effort().durability_volatile(), std::bind(&MavsdkBridgeNode::gps_data2_callback, this, _1), sub_options);
+            sub_imu_data = this->create_subscription<sensor_msgs::msg::Imu>("mavros/imu/data", rclcpp::QoS(rclcpp::KeepLast(10)).best_effort().durability_volatile(), std::bind(&MavsdkBridgeNode::imu_data_callback, this, _1), sub_options);
+            sub_gps1_data = this->create_subscription<mavros_msgs::msg::GPSRAW>("mavros/gpsstatus/gps1/raw", rclcpp::QoS(rclcpp::KeepLast(10)).best_effort().durability_volatile(), std::bind(&MavsdkBridgeNode::gps_data1_callback, this, _1), sub_options);
+            sub_gps2_data = this->create_subscription<mavros_msgs::msg::GPSRAW>("mavros/gpsstatus/gps2/raw", rclcpp::QoS(rclcpp::KeepLast(10)).best_effort().durability_volatile(), std::bind(&MavsdkBridgeNode::gps_data2_callback, this, _1), sub_options);
 
             utm_to_wgs_client = this->create_client<privyaznik_msgs::srv::UtmToWgs>("utm_to_wgs", rmw_qos_profile_default, cb_group);
             wgs_to_utm_client = this->create_client<privyaznik_msgs::srv::WgsToUtm>("wgs_to_utm", rmw_qos_profile_default, cb_group);
@@ -630,17 +702,20 @@ class MavsdkBridgeNode : public rclcpp::Node
                 throw std::exception();
             }
 
-            system = mavsdk.first_autopilot(3.0);
+            system = mavsdk.first_autopilot(15.0);
             while (!system) 
             {
                 std::cerr << "Timed out waiting for system\n";
                 throw std::exception();
             }
 
-            mission = std::make_unique<mavsdk::MissionRaw>(system.value());
+            drone_sys_id = system.value()->get_system_id();
+
+            mission_raw = std::make_unique<mavsdk::MissionRaw>(system.value());
             action = std::make_unique<mavsdk::Action>(system.value());
             telemetry = std::make_unique<mavsdk::Telemetry>(system.value());
             mavlink_passthrough = std::make_unique<MavlinkPassthrough>(system.value());
+            offboard = std::make_unique<mavsdk::Offboard>(system.value());
 
             auto param_handle = Param{*system};
 
@@ -662,6 +737,14 @@ class MavsdkBridgeNode : public rclcpp::Node
                 std::string default_zmq_connect_address = "tcp://127.0.0.1:8080";
                 socket.bind(default_zmq_connect_address);
             }
+
+            // Sub to distance sensor data to estimate landing marker position
+            telemetry->subscribe_distance_sensor([this](Telemetry::DistanceSensor distance){current_distance_sensor_data = distance;});
+
+            // // Sub to drone position ned to estimate landing marker position
+            // telemetry->subscribe_position_velocity_ned([this](Telemetry::PositionVelocityNed pos_ned){current_posvel_ned = pos_ned;});
+
+            telemetry->subscribe_attitude_euler([this](Telemetry::EulerAngle attitude_euler){current_attitude_euler = attitude_euler;});
 
             telemetry->subscribe_home([this](Telemetry::Position home_in){home_position = home_in;});
 
@@ -703,17 +786,43 @@ class MavsdkBridgeNode : public rclcpp::Node
     private:
         Mavsdk mavsdk;
         bool is_in_flight;
+
+        double start_time_ms;
+
+        double drone_sys_id;
+
         std::optional<std::shared_ptr<mavsdk::System>> system;
         std::unique_ptr<Telemetry> telemetry;
         std::unique_ptr<MavlinkPassthrough> mavlink_passthrough;
-        std::unique_ptr<mavsdk::MissionRaw> mission;
+        std::unique_ptr<mavsdk::MissionRaw> mission_raw;
+        // std::unique_ptr<mavsdk::Mission> mission;
         std::unique_ptr<mavsdk::Action> action;
+        std::unique_ptr<mavsdk::Offboard> offboard;
 
         Telemetry::Position current_position;
         Telemetry::Position home_position;
+        Telemetry::DistanceSensor current_distance_sensor_data; // distance sensor data to estimate landing marker position
+        // Telemetry::PositionVelocityNed current_posvel_ned; // drone position ned to estimate landing marker position
+        Telemetry::EulerAngle current_attitude_euler;
         double current_heading;
+        mavsdk::Telemetry::LandedState current_landed_state;
+        float x_rad, y_rad; // позиция маркера в кадре относительно центра в радианах
+        double last_time_marker_was_seen;
+        float PLD_MARKER_TIMEOUT_S; // Время, после которого маркер считается потерянным
+        float PLD_ACC_RADIUS_DEG; // пороговый радиус выравнивания в радианах
+        float PLD_SRCH_TIMEOUT; // время, после которого поиск прекращается
+        float PLD_SRCH_ALT; // высота поиска маркера (стартовая высота посадки)
+        float PLD_FIN_APPR_ALT; // высота, ниже которой видимость посадочного маркера необязательна
+        float PLD_KP;  // коэффициенты ПИД регулятора модуля поправки позиции дрона в режиме точной посадки
+        float PLD_KI; // коэффициенты ПИД регулятора модуля поправки позиции дрона в режиме точной посадки 
+        float PLD_KD; // коэффициенты ПИД регулятора модуля поправки позиции дрона в режиме точной посадки
+        float PLD_MAX_SPD; // максимальная скорость движения БПЛА при поправке положения относительно маркера
+        float PLD_MAX_ALT_SPD; // Максимальная скорость снижения или подъема БПЛА в режиме точной посадки
+        float PLD_MIN_ALT_SPD; // Минимальная скорость снижения или подъема БПЛА в режиме точной посадки
+
 
         rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr sub_prec_landing;
+        rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr sub_rangefinder; // Опциональный подписчик на данные высотомера для отправки в полетник. Используется для нестандартных высотомеров 
         rclcpp::Subscription<privyaznik_msgs::msg::Command>::SharedPtr sub_commands;
         rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr sub_imu_data;
         rclcpp::Subscription<mavros_msgs::msg::GPSRAW>::SharedPtr sub_gps1_data;
@@ -843,32 +952,68 @@ class MavsdkBridgeNode : public rclcpp::Node
             gps2_cb_save = gps2;
         }
 
+
+        void rangefinder_callback(sensor_msgs::msg::LaserScan::SharedPtr rf_msg)
+        {
+            if (rf_msg->ranges.size() > 0 and !std::isinf(rf_msg->ranges.at(0)))
+            {
+                // Define the LANDING_TARGET message content
+                mavlink_distance_sensor_t distance_sensor_msg{};
+                distance_sensor_msg.covariance = UINT8_MAX;
+                distance_sensor_msg.orientation = MAV_SENSOR_ROTATION_PITCH_270;
+                distance_sensor_msg.id = 247;
+                distance_sensor_msg.type = MAV_DISTANCE_SENSOR_LASER;
+                distance_sensor_msg.time_boot_ms = uint64_t(floor(this->get_clock()->now().seconds() * 1000.0 + this->get_clock()->now().nanoseconds() / 1000.0 - start_time_ms));
+                distance_sensor_msg.min_distance = rf_msg->range_min * 100;
+                distance_sensor_msg.min_distance = rf_msg->range_min * 100;
+                distance_sensor_msg.current_distance = rf_msg->ranges.at(0) * 100;
+
+                // Function to pack and send the message
+                auto send_landing_target_message = [this, &distance_sensor_msg](MavlinkAddress mavlink_address, uint8_t channel)
+                {
+                    mavlink_message_t message;
+                    mavlink_msg_distance_sensor_encode(drone_sys_id, channel, &message, &distance_sensor_msg);
+                    return message;
+                };
+
+                // Send the message using queue_message
+                mavsdk::MavlinkPassthrough::Result res = mavlink_passthrough->queue_message(send_landing_target_message);
+                error_msg(res, "rangefinder");
+            }
+        }
+
+
         void prec_land_callback(const geometry_msgs::msg::Vector3::SharedPtr coords) // Проблема такого колбэка в том, что const не позволяет модифицировать переменные за пределами функции
         {
-            float cx, cy;
+            last_time_marker_was_seen = this->get_clock()->now().seconds() + this->get_clock()->now().nanoseconds() / double(1e9);
 
-            cx = coords->x;
-            cy = coords->y;
+            x_rad = coords->x;
+            y_rad = coords->y;
 
-            // Define the LANDING_TARGET message content
-            mavlink_landing_target_t landing_target_msg{};
-            landing_target_msg.time_usec = std::chrono::system_clock::now().time_since_epoch() / std::chrono::nanoseconds(1); // Replace with actual timestamp
-            landing_target_msg.target_num = 0; // Assuming single target
-            landing_target_msg.frame = MAV_FRAME_BODY_FRD; // Example frame
-            landing_target_msg.angle_x = cx;
-            landing_target_msg.angle_y = cy;
+            // float cx, cy;
 
-            // Function to pack and send the message
-            auto send_landing_target_message = [this, &landing_target_msg](MavlinkAddress mavlink_address, uint8_t channel)
-            {
-                mavlink_message_t message;
-                mavlink_msg_landing_target_encode(mavlink_passthrough->get_our_sysid(), channel, &message, &landing_target_msg);
-                return message;
-            };
+            // cx = coords->x;
+            // cy = coords->y;
 
-            // Send the message using queue_message
-            mavsdk::MavlinkPassthrough::Result res = mavlink_passthrough->queue_message(send_landing_target_message);
-            error_msg(res);
+            // // Define the LANDING_TARGET message content
+            // mavlink_landing_target_t landing_target_msg{};
+            // landing_target_msg.time_usec = std::chrono::system_clock::now().time_since_epoch() / std::chrono::nanoseconds(1); // Replace with actual timestamp
+            // landing_target_msg.target_num = 0; // Assuming single target
+            // landing_target_msg.frame = MAV_FRAME_BODY_FRD; // Example frame
+            // landing_target_msg.angle_x = cx;
+            // landing_target_msg.angle_y = cy;
+
+            // // Function to pack and send the message
+            // auto send_landing_target_message = [this, &landing_target_msg](MavlinkAddress mavlink_address, uint8_t channel)
+            // {
+            //     mavlink_message_t message;
+            //     mavlink_msg_landing_target_encode(mavlink_passthrough->get_our_sysid(), channel, &message, &landing_target_msg);
+            //     return message;
+            // };
+
+            // // Send the message using queue_message
+            // mavsdk::MavlinkPassthrough::Result res = mavlink_passthrough->queue_message(send_landing_target_message);
+            // error_msg(res);
         }
 
         /**
@@ -876,31 +1021,361 @@ class MavsdkBridgeNode : public rclcpp::Node
          * @param data std::vector<float> - не несет полезных значений для этой команды
         */
         uint8_t try_land(std::vector<float> data)
-        {    
+        {   
             if (telemetry->landed_state() == Telemetry::LandedState::OnGround)
             {
                 return privyaznik_msgs::action::Command::Result::RES_FAILED;
             }
-            mavsdk::Action::Result result = action->return_to_launch();
-            if (result != mavsdk::Action::Result::Success) 
-            {
-                RCLCPP_ERROR_STREAM(this->get_logger(), "Land failed");
-                return privyaznik_msgs::action::Command::Result::RES_FAILED;
+
+            std::vector<mavsdk::MissionRaw::MissionItem> mission_items;
+
+            for (int i = 0; i < 1; i++) std::cout << "PLD_SRCH_ALT" << PLD_SRCH_ALT << "\n";
+
+            #warning change mission_raw to Ardupilot type
+            #warning must add credibility checks for the land position and remove dummy code 
+            // mission_items.push_back(create_ardupilot_mission_item(
+            //     0,  // _seq
+            //     0, // _frame
+            //     MAV_CMD_NAV_WAYPOINT, // _command
+            //     1, // _current
+            //     1, // _autocontinue
+            //     0, // _param1
+            //     0.5, // _param2
+            //     0, // _param3
+            //     0, // _param4
+            //     home_position.latitude_deg, // _x
+            //     home_position.longitude_deg, // _y
+            //     0, // _z
+            //     0)); //  mission_type
+
+            mission_items.push_back(create_ardupilot_mission_item(
+                0,  // _seq
+                0, // _frame
+                MAV_CMD_NAV_WAYPOINT, // _command
+                1, // _current
+                1, // _autocontinue
+                0, // _param1
+                0.5, // _param2
+                0, // _param3
+                0, // _param4
+                home_position.latitude_deg, // _x
+                home_position.longitude_deg, // _y
+                PLD_SRCH_ALT, // _z
+                0)); //  mission_type
+
+            std::cout << "Uploading mission_raw...\n";
+            // MissionRaw::MissionPlan mission_plan{};
+            // mission_plan.mission_items = mission_items;
+            MissionRaw::Result upload_result = mission_raw->upload_mission(mission_items);
+
+            while (upload_result != MissionRaw::Result::Success) {
+                std::cerr << "MissionRaw upload failed: " << upload_result << ", exiting.\n";
+                upload_result = mission_raw->upload_mission(mission_items);
             }
-            while (telemetry->landed_state() != Telemetry::LandedState::Landing)
+
+            std::atomic<bool>mission_complete = false;
+            // Before starting the mission_raw, we want to be sure to subscribe to the mission_raw progress.
+            auto ms_handle = mission_raw->subscribe_mission_progress([&mission_complete](mavsdk::MissionRaw::MissionProgress mission_progress) 
             {
-                std::this_thread::sleep_for(20ms);
-            }
-            while (telemetry->landed_state() != Telemetry::LandedState::OnGround)
-            {
-                std::this_thread::sleep_for(100ms);
-                if (telemetry->landed_state() == Telemetry::LandedState::InAir)
+                std::cout << "MissionRaw status update: " << mission_progress.current << " / "
+                        << mission_progress.total << '\n';
+                if (mission_progress.current == mission_progress.total)
                 {
-                    return privyaznik_msgs::action::Command::Result::RES_FAILED;
+                    // We can only set a flag here. If we do more request inside the callback,
+                    // we risk blocking the system.
+
+                    mission_complete = true;
+                }
+            });
+
+            mavsdk::MissionRaw::Result start_mission_result = mission_raw->start_mission();
+            while (start_mission_result != mavsdk::MissionRaw::Result::Success) 
+            // if (start_mission_result != mavsdk::MissionRaw::Result::Success) 
+            {
+                std::cerr << "Starting mission_raw failed: " << start_mission_result << '\n';
+                // return privyaznik_msgs::action::Command::Result::RES_FAILED; 
+                #warning Wrong logic! prec land
+            }    
+
+            while (not mission_complete)
+            {
+                std::cout << "try_land: waiting for mission completion\n";
+                std::this_thread::sleep_for(100ms);
+            }
+
+            mission_raw->unsubscribe_mission_progress(ms_handle);
+
+            double search_start_time = this->get_clock()->now().seconds() + this->get_clock()->now().nanoseconds() / double(1e9);
+            double current_time = this->get_clock()->now().seconds() + this->get_clock()->now().nanoseconds() / double(1e9);
+
+            #warning result is not used!
+            offboard->set_velocity_body({0.0f, 0.0f, 0.0f, 0.0f});
+
+            mavsdk::Offboard::Result offboard_result = offboard->start();
+            while (offboard_result != mavsdk::Offboard::Result::Success) 
+            {
+                std::cerr << "Offboard::start() failed: " << offboard_result << '\n';
+                std::this_thread::sleep_for(20ms);
+                offboard_result = offboard->start();
+            }
+
+
+            bool search_timed_out = false;
+            bool marker_visible = true;
+            while (!search_timed_out)
+            {
+                if (!marker_visible)
+                {
+                    for (int i = 0; i < 1; i++) std::cout << "Marker not visible. Searching...\n";
+                    current_time = this->get_clock()->now().seconds() + this->get_clock()->now().nanoseconds() / double(1e9);
+                    marker_visible = (current_time - last_time_marker_was_seen) < PLD_MARKER_TIMEOUT_S;
+
+                    search_timed_out = (current_time - search_start_time > PLD_SRCH_TIMEOUT);
+                    if (search_timed_out)
+                    {
+                        for (int i = 0; i < 1; i++) std::cout << "Search timed out.\n";
+                        Action::Result land_result = action->land();
+                        while (land_result != Action::Result::Success) {
+                            //Land failed, so exit (in reality might try a return to land or kill.)
+                            // return 1;
+                            #warning blockage threat!
+                            land_result = action->land();
+                        }
+
+                        while (current_landed_state != Telemetry::LandedState::OnGround)
+                        {
+                            std::this_thread::sleep_for(100ms);
+                        }
+                        return privyaznik_msgs::action::Command::Result::RES_SUCCESS;
+                    }
+                }
+                else
+                {
+                    std::cout << "Marker found\n";
+                    
+                    break;
                 }
             }
+            
+            // main prec land loop
+            pid_regulator::PID pid(PLD_KP, PLD_KI, PLD_KD);
+            double last_pid_time = 0;
+
+            float dr = sqrt(x_rad * x_rad + y_rad * y_rad);
+            while (x_rad > (PLD_ACC_RADIUS_DEG * M_PI / 180.0) or y_rad > (PLD_ACC_RADIUS_DEG * M_PI / 180.0))
+            // while (x_rad > (PLD_ACC_RADIUS_DEG * M_PI / 180.0) or y_rad > (PLD_ACC_RADIUS_DEG * M_PI / 180.0))
+            {
+                // for (int i = 0; i < 1; i++) std::cout << "x_rad < (PLD_ACC_RADIUS_DEG * M_PI / 180.0) = " << bool(x_rad < (PLD_ACC_RADIUS_DEG * M_PI / 180.0));
+                // for (int i = 0; i < 1; i++) std::cout << "y_rad < (PLD_ACC_RADIUS_DEG * M_PI / 180.0) = " << bool(y_rad < (PLD_ACC_RADIUS_DEG * M_PI / 180.0));
+
+                for (int i = 0; i < 1; i++) std::cout << "Precision loiter on...\n";
+                current_time = this->get_clock()->now().seconds() + this->get_clock()->now().nanoseconds() / double(1e9);
+                marker_visible = (current_time - last_time_marker_was_seen) < PLD_MARKER_TIMEOUT_S;
+                search_timed_out = (current_time - search_start_time > PLD_SRCH_TIMEOUT);
+
+                if (marker_visible)
+                {
+                    dr = sqrt(x_rad * x_rad + y_rad * y_rad);
+
+                    float movement_radius = pid.pid(dr, current_time - last_pid_time);
+                    float alpha = atan2(-y_rad, x_rad);
+
+                    float x_speed = movement_radius * cos(alpha);
+                    float y_speed = movement_radius * sin(alpha);
+
+                    double vr = sqrt(x_speed * x_speed + y_speed * y_speed);
+                    if (vr > PLD_MAX_SPD)
+                    {
+                        x_speed = PLD_MAX_SPD * cos(alpha);
+                        y_speed = PLD_MAX_SPD * sin(alpha);
+                    }
+
+                    last_pid_time = this->get_clock()->now().seconds() + this->get_clock()->now().nanoseconds() / double(1e9);
+
+                    
+                    for (int i = 0; i < 1; i++) 
+                    {
+                        std::cout << "Marker visible, regulating...\n";
+                        // std::cout << "x_speed = " << x_speed << "\n";
+                        // std::cout << "y_speed = " << y_speed << "\n";
+                        // std::cout << "movement_radius = " << movement_radius << "\n";
+                    }
+                    #warning result is not used!
+                    float z_speed = PLD_MIN_ALT_SPD;
+                    if (current_distance_sensor_data.current_distance_m < PLD_SRCH_ALT) z_speed = make_negative(z_speed);
+                    offboard->set_velocity_body({x_speed, y_speed, z_speed, 0.0f});
+                }
+                else
+                {
+                    for (int i = 0; i < 1; i++) std::cout << "Marker lost.\n";
+                    if (search_timed_out)
+                    {
+                        for (int i = 0; i < 1; i++) std::cout << "Search timed out.\n";
+                        Action::Result land_result = action->land();
+                        while (land_result != Action::Result::Success) {
+                            //Land failed, so exit (in reality might try a return to land or kill.)
+                            // return 1;
+                            #warning blockage threat!
+                            land_result = action->land();
+                        }
+
+                        while (current_landed_state != Telemetry::LandedState::OnGround)
+                        {
+                            std::this_thread::sleep_for(100ms);
+                        }
+                        return privyaznik_msgs::action::Command::Result::RES_SUCCESS;
+                    }
+                    else
+                    {
+                        for (int i = 0; i < 1; i++) std::cout << "Searching for marker...\n";
+                    }
+                }
+                std::this_thread::sleep_for(50ms);
+            }
+
+            float z_speed = PLD_MAX_ALT_SPD; // positive, because NED coordinates are used
+            #warning z_speed is not regulated accroding to alittude!
+            while (current_landed_state != Telemetry::LandedState::OnGround)
+            {
+                float descent_speed_coeff = current_distance_sensor_data.current_distance_m / PLD_SRCH_ALT;
+                if (descent_speed_coeff > 1.0) descent_speed_coeff = 1;
+                if (descent_speed_coeff < 0.5) descent_speed_coeff = 0.5;
+                z_speed = PLD_MAX_ALT_SPD * descent_speed_coeff;
+                if (z_speed > PLD_MAX_ALT_SPD) z_speed = PLD_MAX_ALT_SPD;
+                else if (z_speed < PLD_MIN_ALT_SPD) z_speed = PLD_MIN_ALT_SPD;
+
+                for (int i = 0; i < 1; i++) std::cout << "Entered main prec land loop\n";
+                // variable checks
+                current_time = this->get_clock()->now().seconds() + this->get_clock()->now().nanoseconds() / double(1e9);
+                marker_visible = (current_time - last_time_marker_was_seen) < PLD_MARKER_TIMEOUT_S;
+                
+                if (marker_visible)
+                {
+                    dr = sqrt(x_rad * x_rad + y_rad * y_rad);
+
+                    float movement_radius = pid.pid(dr, current_time - last_pid_time);
+                    float alpha = atan2(-y_rad, x_rad);
+
+                    float x_speed = movement_radius * cos(alpha);
+                    float y_speed = movement_radius * sin(alpha);
+
+                    double vr = sqrt(x_speed * x_speed + y_speed * y_speed);
+                    if (vr > PLD_MAX_SPD)
+                    {
+                        x_speed = PLD_MAX_SPD * cos(alpha);
+                        y_speed = PLD_MAX_SPD * sin(alpha);
+                    }
+
+                    x_speed = x_speed * descent_speed_coeff;
+                    y_speed = y_speed * descent_speed_coeff;
+
+                    last_pid_time = this->get_clock()->now().seconds() + this->get_clock()->now().nanoseconds() / double(1e9);
+
+                    z_speed = make_positive(z_speed);
+                    for (int i = 0; i < 1; i++) 
+                    {
+                        std::cout << "Marker visible, regulating...\n";
+                        // std::cout << "x_speed = " << x_speed << "\n";
+                        // std::cout << "y_speed = " << y_speed << "\n";
+                        // std::cout << "z_speed = " << z_speed << "\n";
+                        // std::cout << "movement_radius = " << movement_radius << "\n";
+                    }
+                    #warning result is not used!
+                    offboard->set_velocity_body({x_speed, y_speed, z_speed, 0.0f});
+                }
+                else
+                {
+                    for (int i = 0; i < 1; i++) std::cout << "Marker not visible...\n";
+                    // x_pid.clear();
+                    // y_pid.clear();
+                    pid.clear();
+                    bool uav_above_land_gurantee_threshold = (current_distance_sensor_data.current_distance_m - PLD_FIN_APPR_ALT) > 0;
+                    if (uav_above_land_gurantee_threshold)
+                    {
+                        for (int i = 0; i < 1; i++) std::cout << "Going up...\n";
+                        bool uav_lower_than_search_altitude = (PLD_SRCH_ALT - current_distance_sensor_data.current_distance_m) > 0;
+                        if (uav_lower_than_search_altitude)
+                        {
+                            for (int i = 0; i < 1; i++) std::cout << "Going up...\n";
+                            #warning result is not used!
+                            z_speed = make_negative(z_speed);
+                            auto res = offboard->set_velocity_body({0.0f, 0.0f, z_speed, 0.0f});
+                        }
+                        else
+                        {
+                            for (int i = 0; i < 1; i++) std::cout << "Descending...\n";
+                            z_speed = make_positive(z_speed);
+                            auto res = offboard->set_velocity_body({0.0f, 0.0f, z_speed, 0.0f});
+                            #warning missing logic
+                            // go home
+                            // (delete vscode)
+                            // land in position
+                        }
+                    }
+                    else
+                    {
+                        // // if (dr)
+                        // for (int i = 0; i < 1; i++) std::cout << "current_distance_sensor_data.current_distance_m = " << current_distance_sensor_data.current_distance_m;
+                        // for (int i = 0; i < 1; i++) std::cout << "PLD_FIN_APPR_ALT = " << PLD_FIN_APPR_ALT;
+                        // for (int i = 0; i < 1; i++) std::cout << "UAV lower than land gurantee thresh. Descending to land...\n";
+                        // z_speed = make_positive(z_speed);
+                        // offboard->set_velocity_body({0.0f, 0.0f, z_speed, 0.0f});
+                        Action::Result land_result = action->land();
+                        while (land_result != Action::Result::Success) {
+                            //Land failed, so exit (in reality might try a return to land or kill.)
+                            // return 1;
+                            #warning blockage threat!
+                            land_result = action->land();
+                        }
+
+                        while (current_landed_state != Telemetry::LandedState::OnGround)
+                        {
+                            std::this_thread::sleep_for(100ms);
+                        }
+                        return privyaznik_msgs::action::Command::Result::RES_SUCCESS;
+                    }
+                }
+                std::this_thread::sleep_for(50ms);
+            }
+
+                // while (current_landed_state != Telemetry::LandedState::OnGround)
+                // {
+                // }
+                
+                mavsdk::Offboard::Result res = offboard->stop();
+
+                while (res != mavsdk::Offboard::Result::Success) 
+                {
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Offboard::stop() failed: " << offboard_result << '\n');
+                    res = offboard->stop();
+                }
+
             return privyaznik_msgs::action::Command::Result::RES_SUCCESS;
         }
+            // if (telemetry->landed_state() == Telemetry::LandedState::OnGround)
+            // {
+            //     return privyaznik_msgs::action::Command::Result::RES_FAILED;
+            // }
+            // mavsdk::Action::Result result = action->return_to_launch();
+            // if (result != mavsdk::Action::Result::Success) 
+            // {
+            //     RCLCPP_ERROR_STREAM(this->get_logger(), "Land failed");
+            //     return privyaznik_msgs::action::Command::Result::RES_FAILED;
+            // }
+            // while (telemetry->landed_state() != Telemetry::LandedState::Landing)
+            // {
+            //     std::this_thread::sleep_for(20ms);
+            // }
+            // while (telemetry->landed_state() != Telemetry::LandedState::OnGround)
+            // {
+            //     std::this_thread::sleep_for(100ms);
+            //     if (telemetry->landed_state() == Telemetry::LandedState::InAir)
+            //     {
+            //         return privyaznik_msgs::action::Command::Result::RES_FAILED;
+            //     }
+            // }
+            // return privyaznik_msgs::action::Command::Result::RES_SUCCESS;
+        // }
 
 
 
@@ -1014,7 +1489,7 @@ class MavsdkBridgeNode : public rclcpp::Node
                     }
                     
                     std::cout << "System ready\n";
-                    std::cout << "Creating and uploading mission\n";
+                    std::cout << "Creating and uploading mission_raw\n";
 
                     // Telemetry::Position home_position;
                     // while (isnan(home_position.absolute_altitude_m) == true) 
@@ -1035,14 +1510,14 @@ class MavsdkBridgeNode : public rclcpp::Node
 
                     std::vector<mavsdk::MissionRaw::MissionItem> land_raw_items;
 
-                    land_raw_items.push_back(create_mission_item(0, 0, 16, 1, 1, 0, 0, 0, 0, home_position.latitude_deg, home_position.longitude_deg, home_position.absolute_altitude_m, 0));
-                    land_raw_items.push_back(create_mission_item(1, 3, 22, 0, 1, 0, 0, 0, 0, 0, 0, z_coor, 0));  
+                    land_raw_items.push_back(create_ardupilot_mission_item(0, 0, 16, 1, 1, 0, 0, 0, 0, home_position.latitude_deg, home_position.longitude_deg, home_position.absolute_altitude_m, 0));
+                    land_raw_items.push_back(create_ardupilot_mission_item(1, 3, 22, 0, 1, 0, 0, 0, 0, 0, 0, z_coor, 0));  
                     
                     std::vector<mavsdk::MissionRaw::MissionItem> mission_items_plan = land_raw_items;
 
-                    std::cout << "Uploading mission...\n";
+                    std::cout << "Uploading mission_raw...\n";
                     
-                    const mavsdk::MissionRaw::Result upload_result = mission->upload_mission(mission_items_plan);
+                    const mavsdk::MissionRaw::Result upload_result = mission_raw->upload_mission(mission_items_plan);
 
                     if (upload_result != mavsdk::MissionRaw::Result::Success) 
                     {
@@ -1066,8 +1541,8 @@ class MavsdkBridgeNode : public rclcpp::Node
                         return privyaznik_msgs::action::Command::Result::RES_FAILED;
                     }
                     std::atomic<bool>mission_complete = false;
-                    // Before starting the mission, we want to be sure to subscribe to the mission progress.
-                    auto ms_handle = mission->subscribe_mission_progress([&mission_complete](mavsdk::MissionRaw::MissionProgress mission_progress) 
+                    // Before starting the mission_raw, we want to be sure to subscribe to the mission_raw progress.
+                    auto ms_handle = mission_raw->subscribe_mission_progress([&mission_complete](mavsdk::MissionRaw::MissionProgress mission_progress) 
                     {
                         std::cout << "Mission status update: " << mission_progress.current << " / "
                                 << mission_progress.total << '\n';
@@ -1080,15 +1555,15 @@ class MavsdkBridgeNode : public rclcpp::Node
                         }
                     });
 
-                    mavsdk::MissionRaw::Result start_mission_result = mission->start_mission();
+                    mavsdk::MissionRaw::Result start_mission_result = mission_raw->start_mission();
                     if (start_mission_result != mavsdk::MissionRaw::Result::Success) 
                     {
-                        std::cerr << "Starting mission failed: " << start_mission_result << '\n';
+                        std::cerr << "Starting mission_raw failed: " << start_mission_result << '\n';
                         std::cout << "Commanding RTL...\n";
                         const mavsdk::Action::Result rtl_result = action->return_to_launch();
                         if (rtl_result != mavsdk::Action::Result::Success) {
                             std::cout << "Failed to command RTL: " << rtl_result << '\n';
-                            mission->unsubscribe_mission_progress(ms_handle);
+                            mission_raw->unsubscribe_mission_progress(ms_handle);
                             return privyaznik_msgs::action::Command::Result::RES_FAILED;
                         }
                     }    
@@ -1098,7 +1573,7 @@ class MavsdkBridgeNode : public rclcpp::Node
                         std::this_thread::sleep_for(100ms);
                     }
 
-                    mission->unsubscribe_mission_progress(ms_handle);
+                    mission_raw->unsubscribe_mission_progress(ms_handle);
                     return privyaznik_msgs::action::Command::Result::RES_SUCCESS;
                 }
                 else return privyaznik_msgs::action::Command::Result::RES_FAILED;
@@ -1175,6 +1650,34 @@ class MavsdkBridgeNode : public rclcpp::Node
             socket.send(zmq::buffer(serial_data));
         }
 
+
+        void update_landing_state()
+        {
+            current_landed_state = telemetry->landed_state();
+
+            if (current_landed_state == Telemetry::LandedState::OnGround)
+            {
+                std::cout << "Current state: OnGround" << "\n";
+            }
+            else if (current_landed_state == Telemetry::LandedState::InAir)
+            {
+                std::cout << "Current state: InAir" << "\n";
+            }
+            else if (current_landed_state == Telemetry::LandedState::Landing)
+            {
+                std::cout << "Current state: InAir" << "\n";
+            }
+            else if (current_landed_state == Telemetry::LandedState::TakingOff)
+            {
+                std::cout << "Current state: TakingOff" << "\n";
+            }
+            else if (current_landed_state == Telemetry::LandedState::Unknown)
+            {
+                std::cout << "Current state: Unknown" << "\n";
+            }
+        }
+
+
         void info_output() 
         {
             std::cout << "\nTIME GOES BACK ---> " << std::to_string(this->get_clock()->now().seconds()) << "\n\n"; 
@@ -1187,6 +1690,10 @@ class MavsdkBridgeNode : public rclcpp::Node
                 std::cout << key << " : " << value << "\n";
             }
             std::cout << "----------------" << "\n";
+
+            update_landing_state();
+
+            std::cout << "Current rangefinder data: " << current_distance_sensor_data.current_distance_m << std::endl;
 
             gps_fix_type_info(gps1_cb_save, 1);
             gps_fix_type_info(gps2_cb_save, 2);
