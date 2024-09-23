@@ -1389,7 +1389,7 @@ class MavsdkBridgeNode : public rclcpp::Node
             double easting, northing;
             easting = data[0]; 
             northing = data[1]; 
-            altitude = data[2];
+            // altitude = data[2];
             yaw = data[3];
 
 
@@ -1405,10 +1405,14 @@ class MavsdkBridgeNode : public rclcpp::Node
             while (wgs_to_utm_response_future->wait_for(50ms) != std::future_status::ready) RCLCPP_WARN_STREAM(this->get_logger(), "Try move converting WGS to UTM. Waiting...");
             std::shared_ptr<privyaznik_msgs::srv::WgsToUtm_Response> response = wgs_to_utm_response_future->get();
 
+            easting += response->easting; 
+            northing += response->northing;
+            altitude = data.at(2) + current_position.absolute_altitude_m; 
+
+
 // double local_yaw = global_to_local(current_heading);
 // easting = data.at(0) * cos(local_yaw) - data.at(1) * sin(local_yaw) + response->easting;
 // northing = data.at(0) * sin(local_yaw) + data.at(1) * cos(local_yaw) + response->northing;
-            altitude = data.at(2) + current_position.absolute_altitude_m; 
 // yaw = local_to_global(normalize_angle(data.at(3) + local_yaw));
             
 
@@ -1448,7 +1452,7 @@ class MavsdkBridgeNode : public rclcpp::Node
             while (utm_to_wgs_response_future->wait_for(50ms) != std::future_status::ready) RCLCPP_WARN_STREAM(this->get_logger(), "Try move converting UTM to WGS. Waiting...");
             std::shared_ptr<privyaznik_msgs::srv::UtmToWgs_Response> goal = utm_to_wgs_response_future->get();
 
-            mavsdk::Action::Result result = action->goto_location(goal->latitude + 0.001, goal->longitude, altitude, res);
+            mavsdk::Action::Result result = action->goto_location(goal->latitude, goal->longitude, altitude, res);
             if (result != mavsdk::Action::Result::Success) 
             {
                 RCLCPP_ERROR_STREAM(this->get_logger(), "Move failed");
@@ -1471,7 +1475,7 @@ class MavsdkBridgeNode : public rclcpp::Node
                 return privyaznik_msgs::action::Command::Result::RES_FAILED;
             }
 
-            set_home_position_to_current_position();
+            // set_home_position_to_current_position();
 
             
             float z_coor;
