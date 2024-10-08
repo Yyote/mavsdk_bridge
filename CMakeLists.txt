@@ -19,6 +19,8 @@ find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(euler_angles_lib REQUIRED)
 find_package(pid_regulator_lib REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 
 # uncomment the following section in order to fill in
 # further dependencies manually.
